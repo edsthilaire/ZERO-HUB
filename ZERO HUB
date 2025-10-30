@@ -1,7 +1,42 @@
 -- ZERO HUB - SISTEMA AUTO QUEST INTELIGENTE
-local QuestTab = CreateTab("🎯 AUTO QUEST")
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 
--- BASE DE DATOS DE NPCS POR NIVEL
+local Window = OrionLib:MakeWindow({
+    Name = "ZERO HUB | Blox Fruits", 
+    HidePremium = false,
+    SaveConfig = true, 
+    ConfigFolder = "ZERO_HUB"
+})
+
+-- Main Quest Tab
+local QuestTab = Window:MakeTab({
+    Name = "🎯 Auto Quest",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- Farm Tab
+local FarmTab = Window:MakeTab({
+    Name = "⚔️ Farm",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- Stats Tab
+local StatsTab = Window:MakeTab({
+    Name = "📊 Stats",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- Teleport Tab
+local TeleportTab = Window:MakeTab({
+    Name = "📍 Teleport",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- BASE DE DATOS DE NPCS (tu código original)
 local QuestNPCs = {
     -- First Sea
     {
@@ -13,202 +48,132 @@ local QuestNPCs = {
         Enemy = "Bandits",
         Sea = 1
     },
-    {
-        Name = "Monkey Trainer",
-        NPC = "Adventurer", 
-        Island = "Jungle",
-        Level = "15-30",
-        CFrame = CFrame.new(-1500, 70, -200),
-        Enemy = "Monkeys, Gorillas",
-        Sea = 1
-    },
-    {
-        Name = "Pirate Captain",
-        NPC = "Pirate Adventurer",
-        Island = "Pirate Village", 
-        Level = "30-60",
-        CFrame = CFrame.new(-1150, 50, 3850),
-        Enemy = "Pirates, Brutes",
-        Sea = 1
-    },
-    {
-        Name = "Desert Bandit",
-        NPC = "Desert Adventurer",
-        Island = "Desert",
-        Level = "60-90", 
-        CFrame = CFrame.new(950, 50, 4100),
-        Enemy = "Desert Bandits",
-        Sea = 1
-    },
-    {
-        Name = "Snow Warrior",
-        NPC = "Villager",
-        Island = "Frozen Village",
-        Level = "90-120",
-        CFrame = CFrame.new(1150, 150, -1250),
-        Enemy = "Snow Bandits, Yeti",
-        Sea = 1
-    },
-    {
-        Name = "Marine Officer", 
-        NPC = "Vice Admiral's Assistant",
-        Island = "Marine Fortress",
-        Level = "120-150",
-        CFrame = CFrame.new(-4850, 331, -360),
-        Enemy = "Marine Officers",
-        Sea = 1
-    }
-    -- Puedes seguir agregando más NPCs aquí
+    -- [Resto de tus NPCs aquí...]
 }
 
--- VARIABLES GLOBALES
-getgenv().AutoQuestEnabled = false
-getgenv().CurrentQuestNPC = nil
-getgenv().QuestFarmEnabled = false
+-- Sección de Auto Quest
+local QuestSection = QuestTab:AddSection({
+    Name = "Quest Settings"
+})
 
--- CONFIGURACIÓN PRINCIPAL
-_G.Settings = {
-    -- Quest Settings
-    ['Auto Quest'] = true,
-    ['Auto Farm'] = true,
-    ['Fast Attack'] = true,
-    ['Auto Skills'] = true,
-    
-    -- Configuraciones de Pelea
-    ['Distance Mob'] = 5,
-    ['Mob Select'] = "Closest",
-    ['Lock Mob'] = true,
-    
-    -- Frutas
-    ['Auto Store Fruits'] = true,
-    ['Auto Raid'] = true,
-    ['Auto Buy Race'] = true,
-    
-    -- Misceláneos
-    ['White Screen'] = false,
-    ['FPS Boost'] = true,
-    ['Auto Rejoin'] = true
-}
-
--- FUNCIÓN PARA OBTENER NIVEL DEL JUGADOR
-function GetPlayerLevel()
-    local success, level = pcall(function()
-        return Player.Data.Level.Value
-    end)
-    return success and level or 1
-end
-
--- FUNCIÓN PARA ENCONTRAR NPC ÓPTIMO
-function FindOptimalNPC()
-    local playerLevel = GetPlayerLevel()
-    local currentSea = 1 -- Puedes detectar el sea automáticamente
-    
-    for _, npcData in pairs(QuestNPCs) do
-        if npcData.Sea == currentSea then
-            local minLevel = tonumber(npcData.Level:match("(%d+)"))
-            local maxLevel = tonumber(npcData.Level:match("%d+%-(%d+)")) or minLevel + 50
-            
-            if playerLevel >= minLevel and playerLevel <= maxLevel then
-                return npcData
-            end
-        end
-    end
-    return QuestNPCs[1] -- Fallback
-end
-
--- FUNCIÓN PARA TELEPORTAR A NPC
-function TeleportToNPC(npcData)
-    pcall(function()
-        Player.Character:SetPrimaryPartCFrame(npcData.CFrame * CFrame.new(0, 0, -5))
-        
-        game:GetService("StarterGui"):SetCore("SendNotification",{
-            Title = "🎯 ZERO HUB",
-            Text = "Viajando a: " .. npcData.Name,
-            Duration = 3
-        })
-        
-        print("📍 Teleportando a: " .. npcData.Name .. " | Nivel: " .. npcData.Level)
-    end)
-end
-
--- FUNCIÓN PARA FARMER ENEMIGOS DE QUEST
-function FarmQuestEnemies(enemyType)
-    pcall(function()
-        local enemies = workspace:FindFirstChild("Enemies")
-        if enemies then
-            for _, enemy in pairs(enemies:GetChildren()) do
-                if getgenv().QuestFarmEnabled and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                    if string.find(enemy.Name:lower(), enemyType:lower()) or enemyType == "All" then
-                        Player.Character:SetPrimaryPartCFrame(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, -8))
-                        wait(0.3)
-                        
-                        -- Atacar con todas las herramientas
-                        for _, tool in pairs(Player.Character:GetChildren()) do
-                            if tool:IsA("Tool") then
-                                tool:Activate()
-                            end
-                        end
-                        break
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- UI ELEMENTS
-QuestTab:AddToggle({
-    Name = "Auto Quest Inteligente",
+QuestSection:AddToggle({
+    Name = "Auto Quest",
     Default = false,
+    Flag = "AutoQuest",
+    Save = true,
     Callback = function(Value)
         getgenv().AutoQuestEnabled = Value
         if Value then
             AutoQuestSystem()
         end
-    end
+    end    
 })
 
-QuestTab:AddButton({
-    Name = "🔍 Buscar NPC Óptimo",
+QuestSection:AddButton({
+    Name = "Buscar NPC Óptimo",
     Callback = function()
         local optimalNPC = FindOptimalNPC()
-        getgenv().CurrentQuestNPC = optimalNPC
-        
-        game:GetService("StarterGui"):SetCore("SendNotification",{
-            Title = "🎯 ZERO HUB",
-            Text = optimalNPC.Name .. " | Nivel " .. optimalNPC.Level,
-            Duration = 5
+        OrionLib:MakeNotification({
+            Name = "ZERO HUB",
+            Content = "NPC Encontrado: " .. optimalNPC.Name .. "\nNivel: " .. optimalNPC.Level,
+            Image = "rbxassetid://4483345998",
+            Time = 5
         })
-    end
+    end    
 })
 
--- Sistema Auto Quest Principal
-function AutoQuestSystem()
-    spawn(function()
-        while getgenv().AutoQuestEnabled do
-            pcall(function()
-                local optimalNPC = FindOptimalNPC()
-                getgenv().CurrentQuestNPC = optimalNPC
-                
-                -- Teleportar al NPC
-                TeleportToNPC(optimalNPC)
-                
-                -- Esperar y activar farmeo
-                wait(3)
-                getgenv().QuestFarmEnabled = true
-                
-                -- Farmear enemigos
-                spawn(function()
-                    while getgenv().QuestFarmEnabled and getgenv().AutoQuestEnabled and wait(0.5) do
-                        FarmQuestEnemies(optimalNPC.Enemy)
-                    end
-                end)
-                
-                wait(30) -- Esperar 30 segundos antes de re-evaluar
-            end)
-            wait(1)
-        end
+QuestSection:AddToggle({
+    Name = "Auto Farm",
+    Default = false,
+    Flag = "AutoFarm",
+    Save = true,
+    Callback = function(Value)
+        getgenv().QuestFarmEnabled = Value
+    end    
+})
+
+-- Sección de Farm
+local FarmSection = FarmTab:AddSection({
+    Name = "Farm Settings"
+})
+
+FarmSection:AddToggle({
+    Name = "Fast Attack",
+    Default = true,
+    Flag = "FastAttack",
+    Save = true,
+    Callback = function(Value)
+        getgenv().FastAttack = Value
+    end    
+})
+
+FarmSection:AddSlider({
+    Name = "Farm Distance",
+    Min = 0,
+    Max = 20,
+    Default = 5,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 1,
+    ValueName = "studs",
+    Flag = "FarmDistance",
+    Save = true,
+    Callback = function(Value)
+        getgenv().FarmDistance = Value
+    end    
+})
+
+-- Sección de Stats
+local StatSection = StatsTab:AddSection({
+    Name = "Auto Stats"
+})
+
+StatSection:AddDropdown({
+    Name = "Select Stat",
+    Default = "Melee",
+    Options = {"Melee", "Defense", "Sword", "Gun", "Demon Fruit"},
+    Flag = "SelectedStat",
+    Save = true,
+    Callback = function(Value)
+        getgenv().SelectedStat = Value
+    end    
+})
+
+StatSection:AddToggle({
+    Name = "Auto Add Stats",
+    Default = false,
+    Flag = "AutoStats",
+    Save = true,
+    Callback = function(Value)
+        getgenv().AutoStats = Value
+    end    
+})
+
+-- Info Section
+local InfoSection = QuestTab:AddSection({
+    Name = "Information"
+})
+
+InfoSection:AddParagraph("Developer","edsthilaire")
+InfoSection:AddParagraph("Last Update","2025-10-30 21:37:42")
+
+-- [Resto de tus funciones aquí]
+function GetPlayerLevel()
+    local success, level = pcall(function()
+        return game.Players.LocalPlayer.Data.Level.Value
     end)
+    return success and level or 1
+end
+
+function FindOptimalNPC()
+    -- [Tu código original]
+end
+
+function TeleportToNPC(npcData)
+    -- [Tu código original]
+end
+
+function FarmQuestEnemies(enemyType)
+    -- [Tu código original]
 end
 
 -- Anti AFK
@@ -218,15 +183,13 @@ game:GetService("Players").LocalPlayer.Idled:connect(function()
     game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
 end)
 
--- Inicialización
-spawn(function()
-    wait(3)
-    local optimalNPC = FindOptimalNPC()
-    getgenv().CurrentQuestNPC = optimalNPC
-    
-    print("🎯 ZERO HUB - AUTO QUEST INICIADO")
-    print("📍 NPC Inicial: " .. optimalNPC.Name)
-    print("📊 Nivel Recomendado: " .. optimalNPC.Level)
-    print("🏝️ Isla: " .. optimalNPC.Island)
-    print("⚔️ Enemigos: " .. optimalNPC.Enemy)
-end)
+-- Notify al iniciar
+OrionLib:MakeNotification({
+    Name = "ZERO HUB",
+    Content = "Script cargado correctamente!\nCreado por: edsthilaire",
+    Image = "rbxassetid://4483345998",
+    Time = 5
+})
+
+-- Init
+OrionLib:Init()
