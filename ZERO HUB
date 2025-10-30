@@ -1,0 +1,394 @@
+-- ZERO HUB - SISTEMA AUTO QUEST INTELIGENTE
+local QuestTab = CreateTab("🎯 AUTO QUEST")
+
+-- BASE DE DATOS DE NPCS POR NIVEL
+local QuestNPCs = {
+    -- First Sea
+    {
+        Name = "Bandit Leader",
+        NPC = "Bandit Leader",
+        Island = "Starter Island",
+        Level = "0-10",
+        CFrame = CFrame.new(1050, 50, 1600),
+        Enemy = "Bandits",
+        Sea = 1
+    },
+    {
+        Name = "Monkey Trainer",
+        NPC = "Adventurer", 
+        Island = "Jungle",
+        Level = "15-30",
+        CFrame = CFrame.new(-1500, 70, -200),
+        Enemy = "Monkeys, Gorillas",
+        Sea = 1
+    },
+    {
+        Name = "Pirate Captain",
+        NPC = "Pirate Adventurer",
+        Island = "Pirate Village", 
+        Level = "30-60",
+        CFrame = CFrame.new(-1150, 50, 3850),
+        Enemy = "Pirates, Brutes",
+        Sea = 1
+    },
+    {
+        Name = "Desert Bandit",
+        NPC = "Desert Adventurer",
+        Island = "Desert",
+        Level = "60-90", 
+        CFrame = CFrame.new(950, 50, 4100),
+        Enemy = "Desert Bandits",
+        Sea = 1
+    },
+    {
+        Name = "Snow Warrior",
+        NPC = "Villager",
+        Island = "Frozen Village",
+        Level = "90-120",
+        CFrame = CFrame.new(1150, 150, -1250),
+        Enemy = "Snow Bandits, Yeti",
+        Sea = 1
+    },
+    {
+        Name = "Marine Officer", 
+        NPC = "Vice Admiral's Assistant",
+        Island = "Marine Fortress",
+        Level = "120-150",
+        CFrame = CFrame.new(-4850, 331, -360),
+        Enemy = "Marine Officers",
+        Sea = 1
+    },
+    {
+        Name = "Sky Guardian",
+        NPC = "Sky Adventurer",
+        Island = "Skylands",
+        Level = "150-190",
+        CFrame = CFrame.new(-500, 450, -200),
+        Enemy = "Sky Bandits",
+        Sea = 1
+    },
+    {
+        Name = "Prison Warden",
+        NPC = "Warden",
+        Island = "Prison",
+        Level = "190-250", 
+        CFrame = CFrame.new(4900, 50, 500),
+        Enemy = "Prisoners",
+        Sea = 1
+    },
+    {
+        Name = "Military Soldier",
+        NPC = "Military Soldier",
+        Island = "Magma Village",
+        Level = "300+",
+        CFrame = CFrame.new(-5500, 80, -1500),
+        Enemy = "Military Soldiers",
+        Sea = 1
+    },
+    -- Second Sea
+    {
+        Name = "Captain Elephant",
+        NPC = "Captain Elephant",
+        Island = "Kingdom of Rose",
+        Level = "700-725", 
+        CFrame = CFrame.new(-450, 80, 650),
+        Enemy = "Galley Pirates",
+        Sea = 2
+    },
+    {
+        Name = "Beautiful Pirate",
+        NPC = "Beautiful Pirate",
+        Island = "Cafe",
+        Level = "725-775",
+        CFrame = CFrame.new(-400, 80, 250),
+        Enemy = "Galley Captains", 
+        Sea = 2
+    }
+}
+
+-- VARIABLES GLOBALES
+getgenv().AutoQuestEnabled = false
+getgenv().CurrentQuestNPC = nil
+getgenv().QuestFarmEnabled = false
+
+-- FUNCIÓN PARA OBTENER NIVEL DEL JUGADOR
+function GetPlayerLevel()
+    local success, level = pcall(function()
+        return Player.Data.Level.Value
+    end)
+    return success and level or 1
+end
+
+-- FUNCIÓN PARA ENCONTRAR NPC ÓPTIMO
+function FindOptimalNPC()
+    local playerLevel = GetPlayerLevel()
+    local currentSea = 1 -- Puedes detectar el sea automáticamente
+    
+    for _, npcData in pairs(QuestNPCs) do
+        if npcData.Sea == currentSea then
+            local minLevel = tonumber(npcData.Level:match("(%d+)"))
+            local maxLevel = tonumber(npcData.Level:match("%d+%-(%d+)")) or minLevel + 50
+            
+            if playerLevel >= minLevel and playerLevel <= maxLevel then
+                return npcData
+            end
+        end
+    end
+    
+    -- Si no encuentra, devuelve el último NPC del sea actual
+    for i = #QuestNPCs, 1, -1 do
+        if QuestNPCs[i].Sea == currentSea then
+            return QuestNPCs[i]
+        end
+    end
+    
+    return QuestNPCs[1] -- Fallback
+end
+
+-- FUNCIÓN PARA TELEPORTAR A NPC
+function TeleportToNPC(npcData)
+    pcall(function()
+        Player.Character:SetPrimaryPartCFrame(npcData.CFrame * CFrame.new(0, 0, -5))
+        
+        game:GetService("StarterGui"):SetCore("SendNotification",{
+            Title = "🎯 AUTO QUEST",
+            Text = "Viajando a: " .. npcData.Name,
+            Duration = 3
+        })
+        
+        print("📍 Teleportando a: " .. npcData.Name .. " | Nivel: " .. npcData.Level)
+    end)
+end
+
+-- FUNCIÓN PARA FARMER ENEMIGOS DE QUEST
+function FarmQuestEnemies(enemyType)
+    pcall(function()
+        local enemies = workspace:FindFirstChild("Enemies")
+        if enemies then
+            for _, enemy in pairs(enemies:GetChildren()) do
+                if getgenv().QuestFarmEnabled and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                    -- Verificar si el enemigo coincide con el tipo de quest
+                    if string.find(enemy.Name:lower(), enemyType:lower()) or enemyType == "All" then
+                        Player.Character:SetPrimaryPartCFrame(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, -8))
+                        wait(0.3)
+                        
+                        -- Atacar con todas las herramientas
+                        for _, tool in pairs(Player.Character:GetChildren()) do
+                            if tool:IsA("Tool") then
+                                tool:Activate()
+                            end
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- SISTEMA AUTO QUEST PRINCIPAL
+CreateToggle(QuestTab, "Auto Quest Inteligente", UDim2.new(0, 10, 0, 10), function(state)
+    getgenv().AutoQuestEnabled = state
+    
+    if state then
+        spawn(function()
+            while getgenv().AutoQuestEnabled and wait(5) do
+                pcall(function()
+                    local optimalNPC = FindOptimalNPC()
+                    getgenv().CurrentQuestNPC = optimalNPC
+                    
+                    -- Teleportar al NPC
+                    TeleportToNPC(optimalNPC)
+                    
+                    -- Esperar y activar farmeo
+                    wait(3)
+                    getgenv().QuestFarmEnabled = true
+                    
+                    -- Farmear enemigos
+                    spawn(function()
+                        while getgenv().QuestFarmEnabled and getgenv().AutoQuestEnabled and wait(0.5) do
+                            FarmQuestEnemies(optimalNPC.Enemy)
+                        end
+                    end)
+                    
+                    -- Verificar si subió de nivel y cambiar NPC
+                    wait(30) -- Esperar 30 segundos antes de re-evaluar
+                end)
+            end
+        end)
+    else
+        getgenv().QuestFarmEnabled = false
+    end
+end)
+
+-- BOTÓN PARA BUSCAR NPC ACTUAL
+CreateButton(QuestTab, "🔍 Buscar NPC Óptimo", UDim2.new(0, 10, 0, 50), function()
+    local optimalNPC = FindOptimalNPC()
+    getgenv().CurrentQuestNPC = optimalNPC
+    
+    game:GetService("StarterGui"):SetCore("SendNotification",{
+        Title = "🎯 NPC ENCONTRADO",
+        Text = optimalNPC.Name .. " | Nivel " .. optimalNPC.Level,
+        Duration = 5
+    })
+    
+    print("🎯 NPC Óptimo: " .. optimalNPC.Name)
+    print("🏝️ Isla: " .. optimalNPC.Island) 
+    print("📊 Nivel: " .. optimalNPC.Level)
+    print("⚔️ Enemigos: " .. optimalNPC.Enemy)
+end)
+
+-- BOTÓN PARA TELEPORTAR A NPC ACTUAL
+CreateButton(QuestTab, "📍 TP a NPC Actual", UDim2.new(0, 10, 0, 90), function()
+    if getgenv().CurrentQuestNPC then
+        TeleportToNPC(getgenv().CurrentQuestNPC)
+    else
+        local optimalNPC = FindOptimalNPC()
+        TeleportToNPC(optimalNPC)
+    end
+end)
+
+-- SELECTOR MANUAL DE NPC
+local npcOptions = {}
+for i, npcData in pairs(QuestNPCs) do
+    table.insert(npcOptions, npcData.Name .. " | " .. npcData.Level)
+end
+
+CreateButton(QuestTab, "🎯 Seleccionar NPC Manual", UDim2.new(0, 10, 0, 130), function()
+    -- Crear interfaz de selección
+    local SelectionFrame = Instance.new("Frame")
+    SelectionFrame.Parent = ScreenGui
+    SelectionFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    SelectionFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+    SelectionFrame.Size = UDim2.new(0, 400, 0, 300)
+    SelectionFrame.Active = true
+    SelectionFrame.Draggable = true
+    
+    local Title = Instance.new("TextLabel")
+    Title.Parent = SelectionFrame
+    Title.BackgroundTransparency = 1
+    Title.Size = UDim2.new(1, 0, 0, 30)
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = "SELECCIONAR NPC"
+    Title.TextColor3 = Color3.fromRGB(0, 255, 255)
+    Title.TextSize = 18
+    
+    local ScrollingFrame = Instance.new("ScrollingFrame")
+    ScrollingFrame.Parent = SelectionFrame
+    ScrollingFrame.Position = UDim2.new(0, 10, 0, 40)
+    ScrollingFrame.Size = UDim2.new(1, -20, 1, -80)
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, #npcOptions * 40)
+    
+    for i, npcOption in pairs(npcOptions) do
+        local NPCButton = CreateButton(ScrollingFrame, npcOption, UDim2.new(0, 0, 0, (i-1)*40), function()
+            for _, npcData in pairs(QuestNPCs) do
+                if npcData.Name .. " | " .. npcData.Level == npcOption then
+                    getgenv().CurrentQuestNPC = npcData
+                    TeleportToNPC(npcData)
+                    SelectionFrame:Destroy()
+                    break
+                end
+            end
+        end)
+        NPCButton.Size = UDim2.new(1, -10, 0, 35)
+    end
+    
+    local CloseBtn = CreateButton(SelectionFrame, "Cerrar", UDim2.new(0, 150, 1, -40), function()
+        SelectionFrame:Destroy()
+    end)
+end)
+
+-- PANEL DE INFORMACIÓN DE QUEST
+CreateToggle(QuestTab, "📊 Mostrar Info Quest", UDim2.new(0, 10, 0, 170), function(state)
+    if state then
+        -- Crear panel de información
+        local InfoFrame = Instance.new("Frame")
+        InfoFrame.Parent = ScreenGui
+        InfoFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        InfoFrame.BackgroundTransparency = 0.5
+        InfoFrame.Position = UDim2.new(0, 10, 0, 100)
+        InfoFrame.Size = UDim2.new(0, 300, 0, 120)
+        
+        local InfoLabel = Instance.new("TextLabel")
+        InfoLabel.Parent = InfoFrame
+        InfoLabel.BackgroundTransparency = 1
+        InfoLabel.Size = UDim2.new(1, 0, 1, 0)
+        InfoLabel.Font = Enum.Font.Gotham
+        InfoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        InfoLabel.TextSize = 12
+        InfoLabel.TextWrapped = true
+        
+        spawn(function()
+            while state and wait(1) do
+                if getgenv().CurrentQuestNPC then
+                    InfoLabel.Text = string.format(
+                        "🎯 QUEST ACTUAL\nNPC: %s\n🏝️ Isla: %s\n📊 Nivel: %s\n⚔️ Enemigos: %s\n🌊 Sea: %d",
+                        getgenv().CurrentQuestNPC.Name,
+                        getgenv().CurrentQuestNPC.Island,
+                        getgenv().CurrentQuestNPC.Level,
+                        getgenv().CurrentQuestNPC.Enemy,
+                        getgenv().CurrentQuestNPC.Sea
+                    )
+                else
+                    InfoLabel.Text = "🎯 AUTO QUEST\nNo hay quest activa\nActiva Auto Quest para empezar"
+                end
+            end
+            InfoFrame:Destroy()
+        end)
+    end
+end)
+
+-- SISTEMA DE RECOMPENSAS AUTOMÁTICO
+CreateToggle(QuestTab, "💰 Auto Reclamar Recompensas", UDim2.new(0, 10, 0, 210), function(state)
+    getgenv().AutoClaimRewards = state
+    if state then
+        spawn(function()
+            while getgenv().AutoClaimRewards and wait(10) do
+                pcall(function()
+                    -- Intentar reclamar recompensas automáticamente
+                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("GetRewards")
+                end)
+            end
+        end)
+    end
+end)
+
+-- FUNCIÓN PARA ACTUALIZAR NPC SEGÚN NIVEL
+function UpdateNPCByLevel()
+    local playerLevel = GetPlayerLevel()
+    local optimalNPC = FindOptimalNPC()
+    
+    if getgenv().CurrentQuestNPC then
+        local currentMinLevel = tonumber(getgenv().CurrentQuestNPC.Level:match("(%d+)"))
+        local optimalMinLevel = tonumber(optimalNPC.Level:match("(%d+)"))
+        
+        if optimalMinLevel > currentMinLevel then
+            getgenv().CurrentQuestNPC = optimalNPC
+            print("🔄 Actualizando NPC a: " .. optimalNPC.Name .. " (Nivel " .. optimalNPC.Level .. ")")
+        end
+    else
+        getgenv().CurrentQuestNPC = optimalNPC
+    end
+end
+
+-- ACTUALIZAR AUTOMÁTICAMENTE CADA 60 SEGUNDOS
+spawn(function()
+    while wait(60) do
+        if getgenv().AutoQuestEnabled then
+            UpdateNPCByLevel()
+        end
+    end
+end)
+
+-- INICIALIZAR NPC AL CARGAR EL SCRIPT
+spawn(function()
+    wait(3)
+    local optimalNPC = FindOptimalNPC()
+    getgenv().CurrentQuestNPC = optimalNPC
+    
+    print("🎯 ZERO HUB - AUTO QUEST INICIADO")
+    print("📍 NPC Inicial: " .. optimalNPC.Name)
+    print("📊 Nivel Recomendado: " .. optimalNPC.Level)
+    print("🏝️ Isla: " .. optimalNPC.Island)
+    print("⚔️ Enemigos: " .. optimalNPC.Enemy)
+end)
