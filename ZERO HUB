@@ -1,195 +1,156 @@
 -- ZERO HUB - SISTEMA AUTO QUEST INTELIGENTE
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+if game.PlaceId == 2753915549 or game.PlaceId == 4442272183 or game.PlaceId == 7449423635 then -- Blox Fruits
 
-local Window = OrionLib:MakeWindow({
-    Name = "ZERO HUB | Blox Fruits", 
-    HidePremium = false,
-    SaveConfig = true, 
-    ConfigFolder = "ZERO_HUB"
-})
+    -- Inicializar variables globales
+    getgenv().AutoQuestEnabled = false
+    getgenv().QuestFarmEnabled = false
+    getgenv().FastAttack = true
+    getgenv().FarmDistance = 5
+    getgenv().SelectedStat = "Melee"
+    getgenv().AutoStats = false
 
--- Main Quest Tab
-local QuestTab = Window:MakeTab({
-    Name = "🎯 Auto Quest",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+    -- Cargar UI Library
+    local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 
--- Farm Tab
-local FarmTab = Window:MakeTab({
-    Name = "⚔️ Farm",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+    -- Crear Ventana Principal
+    local Window = OrionLib:MakeWindow({
+        Name = "ZERO HUB | Blox Fruits", 
+        HidePremium = false,
+        SaveConfig = true, 
+        IntroEnabled = true,
+        IntroText = "ZERO HUB",
+        ConfigFolder = "ZERO_HUB"
+    })
 
--- Stats Tab
-local StatsTab = Window:MakeTab({
-    Name = "📊 Stats",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+    -- Crear Tabs
+    local QuestTab = Window:MakeTab({
+        Name = "🎯 Auto Quest",
+        Icon = "rbxassetid://4483345998",
+        PremiumOnly = false
+    })
 
--- Teleport Tab
-local TeleportTab = Window:MakeTab({
-    Name = "📍 Teleport",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+    local FarmTab = Window:MakeTab({
+        Name = "⚔️ Farm",
+        Icon = "rbxassetid://4483345998",
+        PremiumOnly = false
+    })
 
--- BASE DE DATOS DE NPCS (tu código original)
-local QuestNPCs = {
-    -- First Sea
-    {
-        Name = "Bandit Leader",
-        NPC = "Bandit Leader",
-        Island = "Starter Island",
-        Level = "0-10",
-        CFrame = CFrame.new(1050, 50, 1600),
-        Enemy = "Bandits",
-        Sea = 1
-    },
-    -- [Resto de tus NPCs aquí...]
-}
+    local StatsTab = Window:MakeTab({
+        Name = "📊 Stats",
+        Icon = "rbxassetid://4483345998",
+        PremiumOnly = false
+    })
 
--- Sección de Auto Quest
-local QuestSection = QuestTab:AddSection({
-    Name = "Quest Settings"
-})
+    -- BASE DE DATOS DE NPCS
+    local QuestNPCs = {
+        -- First Sea
+        {
+            Name = "Bandit Leader",
+            NPC = "Bandit Leader",
+            Island = "Starter Island",
+            Level = "0-10",
+            CFrame = CFrame.new(1050, 50, 1600),
+            Enemy = "Bandits",
+            Sea = 1
+        },
+        -- [Resto de NPCs aquí]
+    }
 
-QuestSection:AddToggle({
-    Name = "Auto Quest",
-    Default = false,
-    Flag = "AutoQuest",
-    Save = true,
-    Callback = function(Value)
-        getgenv().AutoQuestEnabled = Value
-        if Value then
-            AutoQuestSystem()
+    -- Funciones principales
+    local function GetPlayerLevel()
+        local Player = game.Players.LocalPlayer
+        if Player.Data and Player.Data.Level then
+            return Player.Data.Level.Value
         end
-    end    
-})
+        return 1
+    end
 
-QuestSection:AddButton({
-    Name = "Buscar NPC Óptimo",
-    Callback = function()
-        local optimalNPC = FindOptimalNPC()
-        OrionLib:MakeNotification({
-            Name = "ZERO HUB",
-            Content = "NPC Encontrado: " .. optimalNPC.Name .. "\nNivel: " .. optimalNPC.Level,
-            Image = "rbxassetid://4483345998",
-            Time = 5
-        })
-    end    
-})
+    local function FindOptimalNPC()
+        local playerLevel = GetPlayerLevel()
+        for _, npc in pairs(QuestNPCs) do
+            local minLevel = tonumber(string.match(npc.Level, "(%d+)"))
+            local maxLevel = tonumber(string.match(npc.Level, "-(%d+)")) or minLevel + 30
+            if playerLevel >= minLevel and playerLevel <= maxLevel then
+                return npc
+            end
+        end
+        return QuestNPCs[1]
+    end
 
-QuestSection:AddToggle({
-    Name = "Auto Farm",
-    Default = false,
-    Flag = "AutoFarm",
-    Save = true,
-    Callback = function(Value)
-        getgenv().QuestFarmEnabled = Value
-    end    
-})
+    -- Sección Auto Quest
+    QuestTab:AddSection({
+        Name = "Auto Quest Settings"
+    })
 
--- Sección de Farm
-local FarmSection = FarmTab:AddSection({
-    Name = "Farm Settings"
-})
+    QuestTab:AddToggle({
+        Name = "Enable Auto Quest",
+        Default = false,
+        Save = true,
+        Flag = "AutoQuest",
+        Callback = function(Value)
+            getgenv().AutoQuestEnabled = Value
+            if Value then
+                -- Auto Quest Logic
+                spawn(function()
+                    while getgenv().AutoQuestEnabled do
+                        local npc = FindOptimalNPC()
+                        if npc then
+                            -- Teleport to NPC
+                            local humanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            if humanoidRootPart then
+                                humanoidRootPart.CFrame = npc.CFrame
+                            end
+                        end
+                        wait(1)
+                    end
+                end)
+            end
+        end
+    })
 
-FarmSection:AddToggle({
-    Name = "Fast Attack",
-    Default = true,
-    Flag = "FastAttack",
-    Save = true,
-    Callback = function(Value)
-        getgenv().FastAttack = Value
-    end    
-})
+    -- Sección Auto Farm
+    FarmTab:AddSection({
+        Name = "Auto Farm Settings"
+    })
 
-FarmSection:AddSlider({
-    Name = "Farm Distance",
-    Min = 0,
-    Max = 20,
-    Default = 5,
-    Color = Color3.fromRGB(255,255,255),
-    Increment = 1,
-    ValueName = "studs",
-    Flag = "FarmDistance",
-    Save = true,
-    Callback = function(Value)
-        getgenv().FarmDistance = Value
-    end    
-})
+    FarmTab:AddToggle({
+        Name = "Enable Auto Farm",
+        Default = false,
+        Save = true,
+        Flag = "AutoFarm",
+        Callback = function(Value)
+            getgenv().QuestFarmEnabled = Value
+            if Value then
+                -- Auto Farm Logic
+                spawn(function()
+                    while getgenv().QuestFarmEnabled do
+                        -- Farm Logic here
+                        wait(1)
+                    end
+                end)
+            end
+        end
+    })
 
--- Sección de Stats
-local StatSection = StatsTab:AddSection({
-    Name = "Auto Stats"
-})
-
-StatSection:AddDropdown({
-    Name = "Select Stat",
-    Default = "Melee",
-    Options = {"Melee", "Defense", "Sword", "Gun", "Demon Fruit"},
-    Flag = "SelectedStat",
-    Save = true,
-    Callback = function(Value)
-        getgenv().SelectedStat = Value
-    end    
-})
-
-StatSection:AddToggle({
-    Name = "Auto Add Stats",
-    Default = false,
-    Flag = "AutoStats",
-    Save = true,
-    Callback = function(Value)
-        getgenv().AutoStats = Value
-    end    
-})
-
--- Info Section
-local InfoSection = QuestTab:AddSection({
-    Name = "Information"
-})
-
-InfoSection:AddParagraph("Developer","edsthilaire")
-InfoSection:AddParagraph("Last Update","2025-10-30 21:37:42")
-
--- [Resto de tus funciones aquí]
-function GetPlayerLevel()
-    local success, level = pcall(function()
-        return game.Players.LocalPlayer.Data.Level.Value
+    -- Anti AFK
+    local VirtualUser = game:GetService("VirtualUser")
+    game:GetService("Players").LocalPlayer.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
     end)
-    return success and level or 1
+
+    -- Notify al iniciar
+    OrionLib:MakeNotification({
+        Name = "ZERO HUB",
+        Content = "Script iniciado correctamente!\nBlox Fruits detectado.",
+        Image = "rbxassetid://4483345998",
+        Time = 5
+    })
+
+    -- Init Library
+    OrionLib:Init()
+
+else
+    -- Si no es Blox Fruits
+    game.Players.LocalPlayer:Kick("🛑 Este script solo funciona en Blox Fruits!")
 end
-
-function FindOptimalNPC()
-    -- [Tu código original]
-end
-
-function TeleportToNPC(npcData)
-    -- [Tu código original]
-end
-
-function FarmQuestEnemies(enemyType)
-    -- [Tu código original]
-end
-
--- Anti AFK
-game:GetService("Players").LocalPlayer.Idled:connect(function()
-    game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-    wait(1)
-    game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-end)
-
--- Notify al iniciar
-OrionLib:MakeNotification({
-    Name = "ZERO HUB",
-    Content = "Script cargado correctamente!\nCreado por: edsthilaire",
-    Image = "rbxassetid://4483345998",
-    Time = 5
-})
-
--- Init
-OrionLib:Init()
