@@ -1,159 +1,129 @@
--- ZERO HUB - SISTEMA DE UI BASE
-local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
+-- ZERO HUB - SISTEMA DE UI
+local MenuUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZoiIntra/SetUIY/main/One.lua"))()
+MenuUI:WindowCreate("ZERO HUB", "rbxassetid://12158615170", "discord.gg/zerogames")
 
--- Crear Ventana Principal
-local Window = redzlib:MakeWindow({
-    Title = "ZERO HUB : Blox Fruits",
-    SubTitle = "by edsthilaire",
-    SaveFolder = "ZERO HUB | Settings.lua"
-})
-
--- Botón de Minimizar
-Window:AddMinimizeButton({
-    Button = { Image = "rbxassetid://71014873973869", BackgroundTransparency = 0 },
-    Corner = { CornerRadius = UDim.new(35, 1) },
-})
-
--- Crear Tabs Principales
-local QuestTab = Window:MakeTab({"🎯 AUTO QUEST", "Quest"})
-local FarmTab = Window:MakeTab({"⚔️ FARM", "Farm"})
-local StatsTab = Window:MakeTab({"📊 STATS", "Stats"})
-local TeleportTab = Window:MakeTab({"📍 TELEPORT", "Location"})
-local RaidTab = Window:MakeTab({"🔥 RAID", "Raid"})
-local FruitTab = Window:MakeTab({"🍎 FRUIT", "Fruit"})
-local ShopTab = Window:MakeTab({"🛒 SHOP", "Shop"})
-local MiscTab = Window:MakeTab({"⚙️ MISC", "Settings"})
-
--- BASE DE DATOS DE NPCS POR NIVEL (Tu código original)
-local QuestNPCs = {
-    -- First Sea
-    {
-        Name = "Bandit Leader",
-        NPC = "Bandit Leader",
-        Island = "Starter Island",
-        Level = "0-10",
-        CFrame = CFrame.new(1050, 50, 1600),
-        Enemy = "Bandits",
-        Sea = 1
-    },
-    -- [Resto de tus NPCs aquí...]
+-- CONFIGURACIONES GLOBALES
+_G.Quest = { 
+    ['RGB Aura Haki'] = true,
+    ['Pull Lever'] = true,
+    ['Quest Dough Awaken'] = true
 }
 
--- VARIABLES GLOBALES
-getgenv().AutoQuestEnabled = false
-getgenv().CurrentQuestNPC = nil
-getgenv().QuestFarmEnabled = false
-getgenv().AutoFarmSettings = {
-    AutoFarm = false,
-    FastAttack = true,
-    SkillZ = true,
-    SkillX = true,
-    SkillC = true,
-    SkillV = true,
-    Distance = 5
+_G.Race = { 
+    ['Select Race'] = {'Human','Fishman','Skypiea','Mink'},
+    ['Lock Race'] = true,
+    ['Evo Race V3'] = true
 }
 
--- FUNCIONES PRINCIPALES
-function GetPlayerLevel()
-    local success, level = pcall(function()
-        return game.Players.LocalPlayer.Data.Level.Value
-    end)
-    return success and level or 1
-end
+_G.Melee = { 
+    ['Godhuman'] = true
+}
 
-function FindOptimalNPC()
-    local playerLevel = GetPlayerLevel()
-    local currentSea = game.PlaceId == 2753915549 and 1 or game.PlaceId == 4442272183 and 2 or 3
-    
-    for _, npcData in pairs(QuestNPCs) do
-        if npcData.Sea == currentSea then
-            local minLevel = tonumber(npcData.Level:match("(%d+)"))
-            local maxLevel = tonumber(npcData.Level:match("%d+%-(%d+)")) or minLevel + 50
-            
-            if playerLevel >= minLevel and playerLevel <= maxLevel then
-                return npcData
-            end
-        end
-    end
-    return QuestNPCs[1]
-end
+_G.Sword = { 
+    ['Saber'] = true,
+    ['Midnight Blade'] = true,
+    ['Shisui'] = true,
+    ['Saddi'] = true,
+    ['Wando'] = true,
+    ['Yama'] = true,
+    ['Koko'] = false,
+    ['Rengoku'] = true,
+    ['Canvander'] = true,
+    ['Buddy Sword'] = true,
+    ['Twin Hooks'] = true,
+    ['SpikeyTrident'] = true,
+    ['Hallow Scryte'] = true,
+    ['Dark Dagger'] = true,
+    ['Tushita'] = true,
+    ['True Triple Katana'] = true,
+    ['Cursed Dual Katana'] = true,
+    ['Shark Anchor'] = true
+}
 
--- AUTO QUEST SYSTEM
-QuestTab:AddToggle({
-    Name = "Auto Quest",
-    Default = false,
-    Description = "Automatically accepts and completes quests based on your level",
-    Callback = function(Value)
-        getgenv().AutoQuestEnabled = Value
-        if Value then
-            AutoQuestSystem()
-        end
-    end
-})
+_G.Gun = {  
+    ['Kabucha'] = true,
+    ['Acidum Rifle'] = true,
+    ['Soul Guitar'] = true, 
+    ['Serpent Bow'] = true
+}
 
--- Función Auto Quest
-function AutoQuestSystem()
-    spawn(function()
-        while getgenv().AutoQuestEnabled do
-            local npc = FindOptimalNPC()
-            if npc then
-                -- Teleport to NPC
-                game.Players.LocalPlayer.Character:SetPrimaryPartCFrame(npc.CFrame * CFrame.new(0, 0, -5))
-                
-                -- Wait for loading
-                wait(1)
-                
-                -- Start farming
-                getgenv().QuestFarmEnabled = true
-                
-                -- Farm enemies
-                while getgenv().QuestFarmEnabled and getgenv().AutoQuestEnabled do
-                    FarmEnemies(npc.Enemy)
-                    wait(0.1)
-                end
-            end
-            wait(1)
-        end
-    end)
-end
+_G.Fruit = { 
+    ['Main Fruit'] = {'Kitsune-Kitsune','T-Rex-T-Rex','Mammoth-Mammoth'},
+    ['Select Fruit'] = {'Dark-Dark','Magma-Magma'}
+}
 
--- AUTO STATS
-StatsTab:AddToggle({
-    Name = "Auto Stats",
-    Default = false,
-    Callback = function(Value)
-        getgenv().AutoStats = Value
-        AutoDistributeStats()
-    end
-})
+_G.Mastery = { 
+    ['Melee'] = true,
+    ['Sword'] = true,
+    ['Fruit'] = true
+}
 
-StatsTab:AddDropdown({
-    Name = "Stat Priority",
-    Options = {"Melee", "Defense", "Sword", "Gun", "Demon Fruit"},
-    Default = "Melee",
-    Callback = function(Value)
-        getgenv().StatPriority = Value
-    end
-})
+_G.Setting = {
+    ['FPS Booster'] = true,
+    ['Auto Close Ui'] = false 
+}
 
--- Sistema de Notificaciones
-function Notify(title, text, duration)
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = duration or 3
-    })
-end
-
--- INICIALIZACIÓN
-spawn(function()
-    wait(1)
-    local optimalNPC = FindOptimalNPC()
-    getgenv().CurrentQuestNPC = optimalNPC
-    
-    Notify(
-        "🎯 ZERO HUB",
-        "Script iniciado con éxito!\nNPC Inicial: " .. optimalNPC.Name,
-        5
-    )
+-- CREAR MENÚ PRINCIPAL
+MenuUI:ButtonAdd("🌟 Blox Fruits Main", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/edsthilaire/ZeroHub/main/BloxFruits.lua"))()
+    MenuUI:WindowDelete()
 end)
+
+MenuUI:ButtonAdd("⚔️ Auto Farm", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/edsthilaire/ZeroHub/main/AutoFarm.lua"))()
+    MenuUI:WindowDelete()
+end)
+
+MenuUI:ButtonAdd("🎯 Auto Quest", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/edsthilaire/ZeroHub/main/AutoQuest.lua"))()
+    MenuUI:WindowDelete()
+end)
+
+MenuUI:ButtonAdd("🍎 Fruit Farm", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/edsthilaire/ZeroHub/main/FruitFarm.lua"))()
+    MenuUI:WindowDelete()
+end)
+
+MenuUI:ButtonAdd("🏃 Race V4", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/edsthilaire/ZeroHub/main/RaceV4.lua"))()
+    MenuUI:WindowDelete()
+end)
+
+-- Anti AFK
+game:GetService("Players").LocalPlayer.Idled:connect(function()
+    game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    wait(1)
+    game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+end)
+print("Anti-AFK Activado")
+
+-- Notify al iniciar
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "ZERO HUB",
+    Text = "Script cargado exitosamente!\nCreado por: edsthilaire\nFecha: 2025-10-30",
+    Duration = 5
+})
+
+-- Crear ventana de Discord
+local DiscordLib = MenuUI:CreateTab("Discord")
+DiscordLib:AddDiscordInvite({
+    Name = "ZERO HUB Community",
+    Description = "¡Únete a nuestra comunidad!",
+    Logo = "rbxassetid://12158615170",
+    Invite = "discord.gg/zerogames"
+})
+
+-- Auto guardado de configuración
+function SaveSettings()
+    local json = game:GetService("HttpService"):JSONEncode(_G.Settings)
+    writefile("ZERO_HUB_SETTINGS.json", json)
+end
+
+function LoadSettings()
+    if isfile("ZERO_HUB_SETTINGS.json") then
+        local json = readfile("ZERO_HUB_SETTINGS.json")
+        _G.Settings = game:GetService("HttpService"):JSONDecode(json)
+    end
+end
+
+LoadSettings()
