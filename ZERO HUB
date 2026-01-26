@@ -1,9 +1,9 @@
 --// Servicios
-local Players        = game:GetService("Players")
-local TweenService   = game:GetService("TweenService")
-local RunService     = game:GetService("RunService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local VirtualUser    = game:GetService("VirtualUser")
+local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
@@ -99,7 +99,7 @@ TabContainer.BackgroundTransparency = 1
 TabContainer.BorderSizePixel = 0
 TabContainer.ScrollBarThickness = 8
 TabContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
-TabContainer.CanvasSize = UDim2.new(0, 0, 2, 0)  -- Ajustar según botones
+TabContainer.CanvasSize = UDim2.new(0, 0, 2, 0)
 TabContainer.Parent = MainFrame
 
 local UIListLayout = Instance.new("UIListLayout")
@@ -115,12 +115,12 @@ UIPadding.Parent = TabContainer
 
 --// Animaciones
 local tweenInfo = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local openPosition  = UDim2.fromScale(0.31, 0.19)
+local openPosition = UDim2.fromScale(0.31, 0.19)
 local closePosition = UDim2.fromScale(0.31, 1.2)
 
 local function OpenMenu()
     MainFrame.Visible = true
-    TweenService:Create(MainFrame, tweenInfo, {Position = openPos}):Play()
+    TweenService:Create(MainFrame, tweenInfo, {Position = openPosition}):Play()
 end
 
 local function CloseMenu()
@@ -163,6 +163,9 @@ function getClosestEnemy(isBossMode, maxDist)
     local closestEnemy = nil
     local shortestDistance = maxDist or 1000
     
+    -- Verificar que existe la carpeta de enemigos
+    if not workspace:FindFirstChild("Enemies") then return nil end
+    
     for _, v in pairs(workspace.Enemies:GetChildren()) do
         local Humanoid = v:FindFirstChild("Humanoid")
         local RootPart = v:FindFirstChild("HumanoidRootPart")
@@ -170,7 +173,7 @@ function getClosestEnemy(isBossMode, maxDist)
             local distance = (hrp.Position - RootPart.Position).Magnitude
             if distance < shortestDistance then
                 local name = v.Name
-                local hasBoss = string.find(name, "Boss")
+                local hasBoss = string.find(name:lower(), "boss")
                 
                 if isBossMode then
                     if hasBoss then
@@ -194,32 +197,38 @@ end
 
 local function startFarmConnection()
     if farmConnection then return end
+    
     farmConnection = RunService.Heartbeat:Connect(function()
         pcall(function()
             local char = player.Character
-            if not char or char.Humanoid.Health <= 0 then return end
+            if not char or not char:FindFirstChild("Humanoid") or char.Humanoid.Health <= 0 then return end
+            
             local hrp = getMyHRP()
             if not hrp then return end
             
             -- Auto Farm Nivel (mobs normales)
             if autoFarmLevelEnabled then
                 local enemy = getClosestEnemy(false, 1200)
-                if enemy then
-                    local ehrp = enemy.HumanoidRootPart
-                    local targetCF = ehrp.CFrame * CFrame.new(math.random(-5,5)*0.1, 0, math.random(-5,5)*0.1)
-                    hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.35)
-                    VirtualUser:ClickButton1(Vector2.new())
+                if enemy and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") then
+                    if enemy.Humanoid.Health > 0 then
+                        local ehrp = enemy.HumanoidRootPart
+                        local targetCF = ehrp.CFrame * CFrame.new(math.random(-5,5)*0.1, 0, math.random(-5,5)*0.1)
+                        hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.35)
+                        VirtualUser:ClickButton1(Vector2.new())
+                    end
                 end
             end
             
             -- Auto Farm Boss
             if autoFarmBossEnabled then
                 local enemy = getClosestEnemy(true, 2500)
-                if enemy then
-                    local ehrp = enemy.HumanoidRootPart
-                    local targetCF = ehrp.CFrame * CFrame.new(math.random(-8,8)*0.1, math.random(3,8), math.random(-12,-6))
-                    hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.45)
-                    VirtualUser:ClickButton1(Vector2.new())
+                if enemy and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") then
+                    if enemy.Humanoid.Health > 0 then
+                        local ehrp = enemy.HumanoidRootPart
+                        local targetCF = ehrp.CFrame * CFrame.new(math.random(-8,8)*0.1, math.random(3,8), math.random(-12,-6))
+                        hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.45)
+                        VirtualUser:ClickButton1(Vector2.new())
+                    end
                 end
             end
         end)
@@ -241,11 +250,14 @@ local function updateFarmConnection()
     end
 end
 
--- Toggles
-local function createToggleButton(name, toggleFunc)
+-- ═══════════════════════════════════════════════════════════════
+-- 🎨 FUNCIONES DE UI
+-- ═══════════════════════════════════════════════════════════════
+
+local function createToggleButton(name, toggleFunc, description)
     local btn = Instance.new("TextButton")
     btn.Name = name
-    btn.Size = UDim2.new(1, -20, 0, 50)
+    btn.Size = UDim2.new(1, -20, 0, 55)
     btn.BackgroundColor3 = Color3.fromRGB(45, 45, 70)
     btn.BorderSizePixel = 0
     btn.Font = Enum.Font.GothamBold
@@ -267,17 +279,41 @@ local function createToggleButton(name, toggleFunc)
     btnGradient.Rotation = 45
     btnGradient.Parent = btn
     
-    btn.MouseButton1Click:Connect(toggleFunc)
+    -- Tooltips
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(55,55,80)}):Play()
     end)
+    
     btn.MouseLeave:Connect(function()
-        local offColor = Color3.fromRGB(45,45,70)
+        local isOn = btn.Text:find("[ON]")
+        local offColor = isOn and Color3.fromRGB(40, 200, 40) or Color3.fromRGB(45,45,70)
         TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = offColor}):Play()
     end)
     
+    btn.MouseButton1Click:Connect(toggleFunc)
+    
     return btn
 end
+
+local function createLabel(text)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -20, 0, 30)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(180, 180, 220)
+    label.TextScaled = true
+    label.LayoutOrder = 0
+    label.Parent = TabContainer
+    return label
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🔘 CREAR BOTONES DEL MENÚ
+-- ═══════════════════════════════════════════════════════════════
+
+-- Título de sección
+createLabel("🎯 AUTO FARM")
 
 -- Botón Auto Farm Nivel
 local farmLevelBtn
@@ -303,19 +339,45 @@ local function toggleFarmBoss()
 end
 farmBossBtn = createToggleButton("Auto Farm Boss", toggleFarmBoss)
 
+-- Separador
+createLabel("")
+
+-- Información del jugador
+createLabel("📊 INFORMACIÓN")
+
+local LevelLabel = Instance.new("TextLabel")
+LevelLabel.Size = UDim2.new(1, -20, 0, 35)
+LevelLabel.BackgroundTransparency = 1
+LevelLabel.Font = Enum.Font.GothamBold
+LevelLabel.Text = "Nivel: " .. Level.Value
+LevelLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+LevelLabel.TextScaled = true
+LevelLabel.LayoutOrder = 1
+LevelLabel.Parent = TabContainer
+
+Level.Changed:Connect(function()
+    LevelLabel.Text = "Nivel: " .. Level.Value
+end)
+
 -- Ajustar CanvasSize dinámicamente
 local function updateCanvas()
     TabContainer.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 20)
 end
 UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 
--- Reiniciar farm al respawnear
+-- ═══════════════════════════════════════════════════════════════
+-- 🔄 REINICIAR FARM AL RESPAWN
+-- ═══════════════════════════════════════════════════════════════
+
 player.CharacterAdded:Connect(function()
-    task.wait(8)  -- Esperar load completo
+    task.wait(8)
     updateFarmConnection()
 end)
 
--- Anti-AFK automático
+-- ═══════════════════════════════════════════════════════════════
+-- 🛡️ ANTI-AFK AUTOMÁTICO
+-- ═══════════════════════════════════════════════════════════════
+
 task.spawn(function()
     while true do
         task.wait(math.random(50, 70))
@@ -326,6 +388,11 @@ task.spawn(function()
     end
 end)
 
+-- ═══════════════════════════════════════════════════════════════
+-- ✅ NOTIFICACIÓN DE CARGA
+-- ═══════════════════════════════════════════════════════════════
+
 print("✅ Menú con AUTO FARM cargado! | Presiona M o botón flotante")
 print("🔥 Auto Farm Nivel: Mata mobs de tu nivel automáticamente")
 print("👑 Auto Farm Boss: Busca y mata bosses cercanos")
+print("🎮 Versión mejorada con correcciones y optimizaciones")
