@@ -1,156 +1,152 @@
--- ZERO HUB - SISTEMA AUTO QUEST INTELIGENTE
-if game.PlaceId == 2753915549 or game.PlaceId == 4442272183 or game.PlaceId == 7449423635 then -- Blox Fruits
+--// Servicios
+local Players        = game:GetService("Players")
+local TweenService   = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
-    -- Inicializar variables globales
-    getgenv().AutoQuestEnabled = false
-    getgenv().QuestFarmEnabled = false
-    getgenv().FastAttack = true
-    getgenv().FarmDistance = 5
-    getgenv().SelectedStat = "Melee"
-    getgenv().AutoStats = false
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-    -- Cargar UI Library
-    local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+--// Crear ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BloxFruitsCoolMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = playerGui
 
-    -- Crear Ventana Principal
-    local Window = OrionLib:MakeWindow({
-        Name = "ZERO HUB | Blox Fruits", 
-        HidePremium = false,
-        SaveConfig = true, 
-        IntroEnabled = true,
-        IntroText = "ZERO HUB",
-        ConfigFolder = "ZERO_HUB"
-    })
+--// Frame principal del menú
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "Main"
+MainFrame.Size = UDim2.fromScale(0.38, 0.62)
+MainFrame.Position = UDim2.fromScale(0.31, 1.2)   -- empieza escondido abajo
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
 
-    -- Crear Tabs
-    local QuestTab = Window:MakeTab({
-        Name = "🎯 Auto Quest",
-        Icon = "rbxassetid://4483345998",
-        PremiumOnly = false
-    })
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 14)
+UICorner.Parent = MainFrame
 
-    local FarmTab = Window:MakeTab({
-        Name = "⚔️ Farm",
-        Icon = "rbxassetid://4483345998",
-        PremiumOnly = false
-    })
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35,35,55)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15,15,25))
+}
+UIGradient.Rotation = 90
+UIGradient.Parent = MainFrame
 
-    local StatsTab = Window:MakeTab({
-        Name = "📊 Stats",
-        Icon = "rbxassetid://4483345998",
-        PremiumOnly = false
-    })
+--// Título
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1,0,0.09,0)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBlack
+Title.Text = "BLOX FRUITS   ★   MENU"
+Title.TextColor3 = Color3.fromRGB(220, 220, 255)
+Title.TextScaled = true
+Title.TextStrokeTransparency = 0.8
+Title.TextStrokeColor3 = Color3.fromRGB(90, 60, 200)
+Title.Parent = MainFrame
 
-    -- BASE DE DATOS DE NPCS
-    local QuestNPCs = {
-        -- First Sea
-        {
-            Name = "Bandit Leader",
-            NPC = "Bandit Leader",
-            Island = "Starter Island",
-            Level = "0-10",
-            CFrame = CFrame.new(1050, 50, 1600),
-            Enemy = "Bandits",
-            Sea = 1
-        },
-        -- [Resto de NPCs aquí]
-    }
+--// Botón Cerrar
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "Close"
+CloseBtn.Size = UDim2.fromScale(0.09, 0.07)
+CloseBtn.Position = UDim2.fromScale(0.90, 0.015)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(190, 50, 50)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+CloseBtn.TextScaled = true
+CloseBtn.Parent = MainFrame
 
-    -- Funciones principales
-    local function GetPlayerLevel()
-        local Player = game.Players.LocalPlayer
-        if Player.Data and Player.Data.Level then
-            return Player.Data.Level.Value
-        end
-        return 1
-    end
+local CloseCorner = Instance.new("UICorner", CloseBtn)
+CloseCorner.CornerRadius = UDim.new(0, 8)
 
-    local function FindOptimalNPC()
-        local playerLevel = GetPlayerLevel()
-        for _, npc in pairs(QuestNPCs) do
-            local minLevel = tonumber(string.match(npc.Level, "(%d+)"))
-            local maxLevel = tonumber(string.match(npc.Level, "-(%d+)")) or minLevel + 30
-            if playerLevel >= minLevel and playerLevel <= maxLevel then
-                return npc
-            end
-        end
-        return QuestNPCs[1]
-    end
+--// Botón para abrir menú (flotante)
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "OpenMenuBtn"
+OpenButton.Size = UDim2.fromScale(0.14, 0.07)
+OpenButton.Position = UDim2.fromScale(0.02, 0.88)
+OpenButton.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.Text = "MENU"
+OpenButton.TextColor3 = Color3.new(1,1,1)
+OpenButton.TextScaled = true
+OpenButton.Parent = ScreenGui
 
-    -- Sección Auto Quest
-    QuestTab:AddSection({
-        Name = "Auto Quest Settings"
-    })
+local OpenCorner = Instance.new("UICorner", OpenButton)
+OpenCorner.CornerRadius = UDim.new(0, 10)
 
-    QuestTab:AddToggle({
-        Name = "Enable Auto Quest",
-        Default = false,
-        Save = true,
-        Flag = "AutoQuest",
-        Callback = function(Value)
-            getgenv().AutoQuestEnabled = Value
-            if Value then
-                -- Auto Quest Logic
-                spawn(function()
-                    while getgenv().AutoQuestEnabled do
-                        local npc = FindOptimalNPC()
-                        if npc then
-                            -- Teleport to NPC
-                            local humanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                            if humanoidRootPart then
-                                humanoidRootPart.CFrame = npc.CFrame
-                            end
-                        end
-                        wait(1)
-                    end
-                end)
-            end
-        end
-    })
+--// Animaciones
+local tweenInfo = TweenInfo.new(
+    0.45,
+    Enum.EasingStyle.Back,
+    Enum.EasingDirection.Out
+)
 
-    -- Sección Auto Farm
-    FarmTab:AddSection({
-        Name = "Auto Farm Settings"
-    })
+local openPosition  = UDim2.fromScale(0.31, 0.19)
+local closePosition = UDim2.fromScale(0.31, 1.2)
 
-    FarmTab:AddToggle({
-        Name = "Enable Auto Farm",
-        Default = false,
-        Save = true,
-        Flag = "AutoFarm",
-        Callback = function(Value)
-            getgenv().QuestFarmEnabled = Value
-            if Value then
-                -- Auto Farm Logic
-                spawn(function()
-                    while getgenv().QuestFarmEnabled do
-                        -- Farm Logic here
-                        wait(1)
-                    end
-                end)
-            end
-        end
-    })
-
-    -- Anti AFK
-    local VirtualUser = game:GetService("VirtualUser")
-    game:GetService("Players").LocalPlayer.Idled:Connect(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end)
-
-    -- Notify al iniciar
-    OrionLib:MakeNotification({
-        Name = "ZERO HUB",
-        Content = "Script iniciado correctamente!\nBlox Fruits detectado.",
-        Image = "rbxassetid://4483345998",
-        Time = 5
-    })
-
-    -- Init Library
-    OrionLib:Init()
-
-else
-    -- Si no es Blox Fruits
-    game.Players.LocalPlayer:Kick("🛑 Este script solo funciona en Blox Fruits!")
+local function OpenMenu()
+    MainFrame.Visible = true
+    TweenService:Create(MainFrame, tweenInfo, {Position = openPosition}):Play()
 end
+
+local function CloseMenu()
+    local tween = TweenService:Create(MainFrame, tweenInfo, {Position = closePosition})
+    tween:Play()
+    tween.Completed:Connect(function()
+        MainFrame.Visible = false
+    end)
+end
+
+--// Conexiones
+OpenButton.MouseButton1Click:Connect(OpenMenu)
+CloseBtn.MouseButton1Click:Connect(CloseMenu)
+
+-- Opcional: cerrar con tecla (por ejemplo ESC o M)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.M then
+        if MainFrame.Visible then
+            CloseMenu()
+        else
+            OpenMenu()
+        end
+    end
+end)
+
+-- ╔════════════════════════════════════════════╗
+-- ║             ←  AQUÍ VAN TUS TABS  →        ║
+-- ╚════════════════════════════════════════════╝
+
+-- Ejemplo de cómo agregar secciones / pestañas:
+
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1,-20,1,-75)
+TabContainer.Position = UDim2.new(0,10,0,65)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = MainFrame
+
+-- Aquí puedes poner ScrollingFrame, botones de pestañas, toggles, etc.
+-- Ejemplo rápido de un botón de "Auto Farm Level":
+
+local ExampleButton = Instance.new("TextButton")
+ExampleButton.Size = UDim2.new(0.45,0,0.12,0)
+ExampleButton.Position = UDim2.new(0.025,0,0.02,0)
+ExampleButton.BackgroundColor3 = Color3.fromRGB(45, 45, 70)
+ExampleButton.Font = Enum.Font.GothamSemibold
+ExampleButton.Text = "Auto Farm → Level"
+ExampleButton.TextColor3 = Color3.new(0.9,0.9,1)
+ExampleButton.TextScaled = true
+ExampleButton.Parent = TabContainer
+
+local btnCorner = Instance.new("UICorner", ExampleButton)
+btnCorner.CornerRadius = UDim.new(0,10)
+
+-- Puedes conectar funciones aquí más adelante
+-- ExampleButton.MouseButton1Click:Connect(function()
+--     -- toggle auto farm
+-- end)
+
+print("Menú cargado ✓  Presiona M o el botón flotante para abrir")
