@@ -1,1 +1,87 @@
+--// FAST ATTACK / AUTO CLICK
+local fastAttackEnabled = false
+local fastAttackConnection = nil
+local attackDelay = 0.05  -- Ajusta: más bajo = más rápido (riesgo de lag/ban)
 
+local function startFastAttack()
+    if fastAttackConnection then return end
+    
+    fastAttackConnection = RunService.RenderStepped:Connect(function()
+        if not fastAttackEnabled then return end
+        
+        pcall(function()
+            local char = player.Character
+            if not char or char.Humanoid.Health <= 0 then return end
+            
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool then
+                -- Ataque con herramienta (mejor para espadas/frutas)
+                tool:Activate()
+                task.wait(attackDelay)  -- Controla la velocidad
+            else
+                -- Fallback si no hay tool equipada
+                VirtualUser:ClickButton1(Vector2.new())
+                task.wait(attackDelay)
+            end
+        end)
+    end)
+end
+
+local function stopFastAttack()
+    if fastAttackConnection then
+        fastAttackConnection:Disconnect()
+        fastAttackConnection = nil
+    end
+end
+
+-- Toggle para el menú
+local fastAttackBtn
+local function toggleFastAttack()
+    fastAttackEnabled = not fastAttackEnabled
+    local status = fastAttackEnabled and " [ON]" or " [OFF]"
+    local color = fastAttackEnabled and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(50,50,80)
+    
+    fastAttackBtn.Text = "Fast Attack / Auto Click" .. status
+    fastAttackBtn.BackgroundColor3 = color
+    
+    if fastAttackEnabled then
+        startFastAttack()
+        notify("Fast Attack", "ACTIVADO - Spam ultra rápido", 4)
+    else
+        stopFastAttack()
+        notify("Fast Attack", "DESACTIVADO", 3)
+    end
+end
+
+-- Agrega el botón en la pestaña MAIN (Tab1_Content)
+fastAttackBtn = createToggleButton("Fast Attack / Auto Click", toggleFastAttack, Tab1_Content)
+
+-- Opcional: Slider para ajustar delay (más pro)
+-- Si quieres agregar un slider simple (usa TextBox o un frame custom)
+local delayLabel = Instance.new("TextLabel")
+delayLabel.Size = UDim2.new(1, -20, 0, 30)
+delayLabel.BackgroundTransparency = 1
+delayLabel.Text = "Delay Fast Attack: 0.05s"
+delayLabel.TextColor3 = Color3.fromRGB(200,200,255)
+delayLabel.TextScaled = true
+delayLabel.Parent = Tab1_Content
+
+local delayBox = Instance.new("TextBox")
+delayBox.Size = UDim2.new(0.6, 0, 0, 35)
+delayBox.BackgroundColor3 = Color3.fromRGB(30,30,50)
+delayBox.Text = "0.05"
+delayBox.TextColor3 = Color3.new(1,1,1)
+delayBox.TextScaled = true
+delayBox.Parent = Tab1_Content
+
+delayBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local num = tonumber(delayBox.Text)
+        if num and num > 0 and num < 1 then
+            attackDelay = num
+            notify("Fast Attack Delay", "Actualizado a " .. num .. "s", 3)
+        else
+            delayBox.Text = tostring(attackDelay)
+        end
+    end
+end)
