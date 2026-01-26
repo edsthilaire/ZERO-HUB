@@ -1,12 +1,25 @@
 --// Servicios
 local Players        = game:GetService("Players")
 local TweenService   = game:GetService("TweenService")
+local RunService     = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser    = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
---// Crear ScreenGui
+-- Esperar Data
+repeat task.wait() until player:FindFirstChild("Data")
+local Data = player.Data
+local Level = Data.Level
+
+-- Variables de toggles
+local autoFarmLevelEnabled = false
+local autoFarmBossEnabled = false
+local farmConnection = nil
+
+-- Crear ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsCoolMenu"
 ScreenGui.ResetOnSpawn = false
@@ -15,8 +28,8 @@ ScreenGui.Parent = playerGui
 --// Frame principal del menú
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "Main"
-MainFrame.Size = UDim2.fromScale(0.38, 0.62)
-MainFrame.Position = UDim2.fromScale(0.31, 1.2)   -- empieza escondido abajo
+MainFrame.Size = UDim2.fromScale(0.38, 0.65)
+MainFrame.Position = UDim2.fromScale(0.31, 1.2)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
@@ -40,7 +53,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1,0,0.09,0)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBlack
-Title.Text = "BLOX FRUITS   ★   MENU"
+Title.Text = "✨ BLOX FRUITS MENU ✨"
 Title.TextColor3 = Color3.fromRGB(220, 220, 255)
 Title.TextScaled = true
 Title.TextStrokeTransparency = 0.8
@@ -77,19 +90,37 @@ OpenButton.Parent = ScreenGui
 local OpenCorner = Instance.new("UICorner", OpenButton)
 OpenCorner.CornerRadius = UDim.new(0, 10)
 
---// Animaciones
-local tweenInfo = TweenInfo.new(
-    0.45,
-    Enum.EasingStyle.Back,
-    Enum.EasingDirection.Out
-)
+--// Contenedor de pestañas/botones
+local TabContainer = Instance.new("ScrollingFrame")
+TabContainer.Name = "Tabs"
+TabContainer.Size = UDim2.new(1, -20, 1, -80)
+TabContainer.Position = UDim2.new(0, 10, 0, 70)
+TabContainer.BackgroundTransparency = 1
+TabContainer.BorderSizePixel = 0
+TabContainer.ScrollBarThickness = 8
+TabContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
+TabContainer.CanvasSize = UDim2.new(0, 0, 2, 0)  -- Ajustar según botones
+TabContainer.Parent = MainFrame
 
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 12)
+UIListLayout.Parent = TabContainer
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingTop = UDim.new(0, 10)
+UIPadding.PaddingLeft = UDim.new(0, 10)
+UIPadding.PaddingRight = UDim.new(0, 10)
+UIPadding.Parent = TabContainer
+
+--// Animaciones
+local tweenInfo = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local openPosition  = UDim2.fromScale(0.31, 0.19)
 local closePosition = UDim2.fromScale(0.31, 1.2)
 
 local function OpenMenu()
     MainFrame.Visible = true
-    TweenService:Create(MainFrame, tweenInfo, {Position = openPosition}):Play()
+    TweenService:Create(MainFrame, tweenInfo, {Position = openPos}):Play()
 end
 
 local function CloseMenu()
@@ -100,11 +131,10 @@ local function CloseMenu()
     end)
 end
 
---// Conexiones
 OpenButton.MouseButton1Click:Connect(OpenMenu)
 CloseBtn.MouseButton1Click:Connect(CloseMenu)
 
--- Opcional: cerrar con tecla (por ejemplo ESC o M)
+-- Tecla M para toggle
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.M then
@@ -116,37 +146,186 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ╔════════════════════════════════════════════╗
--- ║             ←  AQUÍ VAN TUS TABS  →        ║
--- ╚════════════════════════════════════════════╝
+-- ═══════════════════════════════════════════════════════════════
+-- 📈 FUNCIONES DE AUTO FARM
+-- ═══════════════════════════════════════════════════════════════
 
--- Ejemplo de cómo agregar secciones / pestañas:
+local function getMyHRP()
+    local char = player.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
 
-local TabContainer = Instance.new("Frame")
-TabContainer.Size = UDim2.new(1,-20,1,-75)
-TabContainer.Position = UDim2.new(0,10,0,65)
-TabContainer.BackgroundTransparency = 1
-TabContainer.Parent = MainFrame
+function getClosestEnemy(isBossMode, maxDist)
+    local hrp = getMyHRP()
+    if not hrp then return nil end
+    
+    local myLevel = Level.Value
+    local closestEnemy = nil
+    local shortestDistance = maxDist or 1000
+    
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        local Humanoid = v:FindFirstChild("Humanoid")
+        local RootPart = v:FindFirstChild("HumanoidRootPart")
+        if Humanoid and RootPart and Humanoid.Health > 0 then
+            local distance = (hrp.Position - RootPart.Position).Magnitude
+            if distance < shortestDistance then
+                local name = v.Name
+                local hasBoss = string.find(name, "Boss")
+                
+                if isBossMode then
+                    if hasBoss then
+                        closestEnemy = v
+                        shortestDistance = distance
+                    end
+                else
+                    if not hasBoss then
+                        local enemyLvl = tonumber(name:match("%d+")) or 0
+                        if enemyLvl >= myLevel - 150 and enemyLvl <= myLevel + 50 then
+                            closestEnemy = v
+                            shortestDistance = distance
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestEnemy
+end
 
--- Aquí puedes poner ScrollingFrame, botones de pestañas, toggles, etc.
--- Ejemplo rápido de un botón de "Auto Farm Level":
+local function startFarmConnection()
+    if farmConnection then return end
+    farmConnection = RunService.Heartbeat:Connect(function()
+        pcall(function()
+            local char = player.Character
+            if not char or char.Humanoid.Health <= 0 then return end
+            local hrp = getMyHRP()
+            if not hrp then return end
+            
+            -- Auto Farm Nivel (mobs normales)
+            if autoFarmLevelEnabled then
+                local enemy = getClosestEnemy(false, 1200)
+                if enemy then
+                    local ehrp = enemy.HumanoidRootPart
+                    local targetCF = ehrp.CFrame * CFrame.new(math.random(-5,5)*0.1, 0, math.random(-5,5)*0.1)
+                    hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.35)
+                    VirtualUser:ClickButton1(Vector2.new())
+                end
+            end
+            
+            -- Auto Farm Boss
+            if autoFarmBossEnabled then
+                local enemy = getClosestEnemy(true, 2500)
+                if enemy then
+                    local ehrp = enemy.HumanoidRootPart
+                    local targetCF = ehrp.CFrame * CFrame.new(math.random(-8,8)*0.1, math.random(3,8), math.random(-12,-6))
+                    hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.45)
+                    VirtualUser:ClickButton1(Vector2.new())
+                end
+            end
+        end)
+    end)
+end
 
-local ExampleButton = Instance.new("TextButton")
-ExampleButton.Size = UDim2.new(0.45,0,0.12,0)
-ExampleButton.Position = UDim2.new(0.025,0,0.02,0)
-ExampleButton.BackgroundColor3 = Color3.fromRGB(45, 45, 70)
-ExampleButton.Font = Enum.Font.GothamSemibold
-ExampleButton.Text = "Auto Farm → Level"
-ExampleButton.TextColor3 = Color3.new(0.9,0.9,1)
-ExampleButton.TextScaled = true
-ExampleButton.Parent = TabContainer
+local function stopFarmConnection()
+    if farmConnection then
+        farmConnection:Disconnect()
+        farmConnection = nil
+    end
+end
 
-local btnCorner = Instance.new("UICorner", ExampleButton)
-btnCorner.CornerRadius = UDim.new(0,10)
+local function updateFarmConnection()
+    if autoFarmLevelEnabled or autoFarmBossEnabled then
+        startFarmConnection()
+    else
+        stopFarmConnection()
+    end
+end
 
--- Puedes conectar funciones aquí más adelante
--- ExampleButton.MouseButton1Click:Connect(function()
---     -- toggle auto farm
--- end)
+-- Toggles
+local function createToggleButton(name, toggleFunc)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.new(1, -20, 0, 50)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 70)
+    btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = name .. " [OFF]"
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.TextScaled = true
+    btn.LayoutOrder = 1
+    btn.Parent = TabContainer
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 12)
+    btnCorner.Parent = btn
+    
+    local btnGradient = Instance.new("UIGradient")
+    btnGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(60,60,90)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(35,35,55))
+    }
+    btnGradient.Rotation = 45
+    btnGradient.Parent = btn
+    
+    btn.MouseButton1Click:Connect(toggleFunc)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(55,55,80)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        local offColor = Color3.fromRGB(45,45,70)
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = offColor}):Play()
+    end)
+    
+    return btn
+end
 
-print("Menú cargado ✓  Presiona M o el botón flotante para abrir")
+-- Botón Auto Farm Nivel
+local farmLevelBtn
+local function toggleFarmLevel()
+    autoFarmLevelEnabled = not autoFarmLevelEnabled
+    local status = autoFarmLevelEnabled and " [ON]" or " [OFF]"
+    local color = autoFarmLevelEnabled and Color3.fromRGB(40, 200, 40) or Color3.fromRGB(45,45,70)
+    farmLevelBtn.Text = "Auto Farm Nivel" .. status
+    farmLevelBtn.BackgroundColor3 = color
+    updateFarmConnection()
+end
+farmLevelBtn = createToggleButton("Auto Farm Nivel", toggleFarmLevel)
+
+-- Botón Auto Farm Boss
+local farmBossBtn
+local function toggleFarmBoss()
+    autoFarmBossEnabled = not autoFarmBossEnabled
+    local status = autoFarmBossEnabled and " [ON]" or " [OFF]"
+    local color = autoFarmBossEnabled and Color3.fromRGB(40, 200, 40) or Color3.fromRGB(45,45,70)
+    farmBossBtn.Text = "Auto Farm Boss" .. status
+    farmBossBtn.BackgroundColor3 = color
+    updateFarmConnection()
+end
+farmBossBtn = createToggleButton("Auto Farm Boss", toggleFarmBoss)
+
+-- Ajustar CanvasSize dinámicamente
+local function updateCanvas()
+    TabContainer.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 20)
+end
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
+
+-- Reiniciar farm al respawnear
+player.CharacterAdded:Connect(function()
+    task.wait(8)  -- Esperar load completo
+    updateFarmConnection()
+end)
+
+-- Anti-AFK automático
+task.spawn(function()
+    while true do
+        task.wait(math.random(50, 70))
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end
+end)
+
+print("✅ Menú con AUTO FARM cargado! | Presiona M o botón flotante")
+print("🔥 Auto Farm Nivel: Mata mobs de tu nivel automáticamente")
+print("👑 Auto Farm Boss: Busca y mata bosses cercanos")
