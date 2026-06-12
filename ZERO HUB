@@ -1,1218 +1,186 @@
---// ============================================================
---// BLOX FRUITS MENU ULTIMATE v3.0
---// ============================================================
---// Caracteristicas integradas de los mejores hubs:
---// - Auto Farm Nivel & Boss (Original)
---// - Fruit Sniper (Delta/Redz Hub)
---// - ESP Player/Enemy/Fruit (Speed Hub X)
---// - Teleport a Islas (Hoho Hub)
---// - Kill Aura (Banana Hub)
---// - Auto Stats (Neru Hub)
---// - Auto Quest (Teddy Hub)
---// - Anti-AFK mejorado
---// ============================================================
-
---// Servicios
+--// AntiAFK + AntiKick GUI (Larger & Toggle Button)
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local PathfindingService = game:GetService("PathfindingService")
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
--- Esperar Data
-repeat task.wait() until player:FindFirstChild("Data")
-local Data = player.Data
-local Level = Data.Level
-
--- Variables de toggles
-local autoFarmLevelEnabled = false
-local autoFarmBossEnabled = false
-local autoFarmMasteryEnabled = false
-local fruitSniperEnabled = false
-local espEnabled = false
-local killAuraEnabled = false
-local autoStatsEnabled = false
-local autoQuestEnabled = false
-local autoRaidEnabled = false
-local farmConnection = nil
-local fruitConnection = nil
-local killAuraConnection = nil
-local questConnection = nil
-local espConnection = nil
-
--- Variables de ESP
-local espObjects = {}
-local espFolder = nil
-
--- Variables de Teleport
-local islands = {
-    ["Starter"] = Vector3.new(-274.5, 12.8, 535.2),
-    ["Shell Town"] = Vector3.new(-1507.8, 12.8, 149.2),
-    ["Shark Park"] = Vector3.new(-2824.5, 12.8, 1055.2),
-    ["Arlong Park"] = Vector3.new(-4636.5, 12.8, 713.2),
-    ["Baratie"] = Vector3.new(-8396.5, 12.8, 193.2),
-    ["Orange Town"] = Vector3.new(-11536.5, 12.8, 593.2),
-    ["Syrup Village"] = Vector3.new(-15076.5, 12.8, 593.2),
-    ["Marine Fortress"] = Vector3.new(-15736.5, 12.8, 593.2),
-    ["Arctic"] = Vector3.new(-18236.5, 12.8, 593.2),
-    ["Graveyard"] = Vector3.new(-19536.5, 12.8, 593.2),
-    ["Desert"] = Vector3.new(-21236.5, 12.8, 593.2),
-    ["Frozen Village"] = Vector3.new(-22836.5, 12.8, 593.2),
-    ["Jungle"] = Vector3.new(-24536.5, 12.8, 593.2),
-    ["Pirate Village"] = Vector3.new(-26236.5, 12.8, 593.2),
-    ["Magma Village"] = Vector3.new(-27936.5, 12.8, 593.2),
-    ["Underwater City"] = Vector3.new(-29636.5, 12.8, 593.2),
-    ["Skylands"] = Vector3.new(0, 2000, 0),
-    ["Prison"] = Vector3.new(4850, 12.8, 733),
-    ["Colosseum"] = Vector3.new(2800, 12.8, 1200),
-    ["Factory"] = Vector3.new(-125, 12.8, 600),
-    ["Cursed Ship"] = Vector3.new(923, 125, 33750),
-    ["Ice Castle"] = Vector3.new(614, 125, 1327),
-    ["Forgotten Island"] = Vector3.new(-3044, 12.8, 4072),
-    ["Usoap's Island"] = Vector3.new(4705, 12.8, 455),
-    ["Green Zone"] = Vector3.new(-2448, 12.8, 2027),
-    ["Graveyard Island"] = Vector3.new(-9514, 12.8, 6097),
-    ["Snow Mountain"] = Vector3.new(685, 400, 1030),
-    ["Hot and Cold"] = Vector3.new(-5585, 12.8, 2937),
-    ["Dark Arena"] = Vector3.new(3781, 12.8, 607),
-    ["Cake Land"] = Vector3.new(-1884, 36.8, 12489),
-    ["Peanut Island"] = Vector3.new(-2062, 36.8, 12758),
-    ["Candy Cane Island"] = Vector3.new(-2571, 36.8, 12634),
-    ["Ice Cream Island"] = Vector3.new(-2940, 36.8, 12509),
-    ["Peanut Butter Island"] = Vector3.new(-3190, 36.8, 12284),
-    ["Cake Ground"] = Vector3.new(-3415, 36.8, 12059),
-    ["Chocolate Island"] = Vector3.new(-3665, 36.8, 11834),
-    ["Cocoa Island"] = Vector3.new(-3915, 36.8, 11609)
-}
-
--- Crear ScreenGui
+--// GUI Creation
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsUltimate"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = playerGui
+ScreenGui.Parent = game.CoreGui
+ScreenGui.Name = "AntiAFKV3"
 
---// Frame principal del menú
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "Main"
-MainFrame.Size = UDim2.fromScale(0.42, 0.75)
-MainFrame.Position = UDim2.fromScale(0.29, 1.2)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
-MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
+local Frame = Instance.new("Frame")
+Frame.Parent = ScreenGui
+Frame.Size = UDim2.new(0, 320, 0, 280) -- Increased Size
+Frame.Position = UDim2.new(0.5, -160, 0.4, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Frame.BackgroundTransparency = 0.1
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+Frame.ClipsDescendants = true
+Frame.Visible = true -- Initially visible
 
+--// UI Corner (Smooth Edge)
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 16)
-UICorner.Parent = MainFrame
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = Frame
 
-local UIGradient = Instance.new("UIGradient")
-UIGradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(40,40,60)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10,10,20))
+--// Neon Glow Effect
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Parent = Frame
+UIStroke.Thickness = 2.5
+UIStroke.Color = Color3.fromRGB(0, 255, 150)
+UIStroke.Transparency = 0.4
+
+--// Gradient Animation
+local Gradient = Instance.new("UIGradient")
+Gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 255)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 150))
 }
-UIGradient.Rotation = 90
-UIGradient.Parent = MainFrame
+Gradient.Rotation = 90
+Gradient.Parent = Frame
 
---// Título
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,0,0.08,0)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBlack
-Title.Text = "🔥 BLOX FRUITS ULTIMATE v3.0 🔥"
-Title.TextColor3 = Color3.fromRGB(255, 100, 100)
-Title.TextScaled = true
-Title.TextStrokeTransparency = 0.7
-Title.TextStrokeColor3 = Color3.fromRGB(200, 50, 50)
-Title.Parent = MainFrame
-
---// Botón Cerrar
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Name = "Close"
-CloseBtn.Size = UDim2.fromScale(0.08, 0.06)
-CloseBtn.Position = UDim2.fromScale(0.90, 0.01)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Text = "✖"
-CloseBtn.TextColor3 = Color3.new(1,1,1)
-CloseBtn.TextScaled = true
-CloseBtn.Parent = MainFrame
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 8)
-CloseCorner.Parent = CloseBtn
-
---// Botón para abrir menú (flotante)
-local OpenButton = Instance.new("TextButton")
-OpenButton.Name = "OpenMenuBtn"
-OpenButton.Size = UDim2.fromScale(0.12, 0.06)
-OpenButton.Position = UDim2.fromScale(0.02, 0.90)
-OpenButton.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
-OpenButton.Font = Enum.Font.GothamBold
-OpenButton.Text = "🔥 MENU"
-OpenButton.TextColor3 = Color3.new(1,1,1)
-OpenButton.TextScaled = true
-OpenButton.Parent = ScreenGui
-
-local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(0, 12)
-OpenCorner.Parent = OpenButton
-
---// Pestas
-local TabButtons = Instance.new("Frame")
-TabButtons.Size = UDim2.new(1, 0, 0.08, 0)
-TabButtons.Position = UDim2.new(0, 0, 0.08, 0)
-TabButtons.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-TabButtons.BorderSizePixel = 0
-TabButtons.Parent = MainFrame
-
-local Tab1Btn = Instance.new("TextButton")
-Tab1Btn.Size = UDim2.fromScale(0.25, 1)
-Tab1Btn.Position = UDim2.fromScale(0, 0)
-Tab1Btn.BackgroundColor3 = Color3.fromRGB(60, 60, 90)
-Tab1Btn.Font = Enum.Font.GothamBold
-Tab1Btn.Text = "MAIN"
-Tab1Btn.TextColor3 = Color3.new(1,1,1)
-Tab1Btn.TextScaled = true
-Tab1Btn.Name = "Tab1"
-Tab1Btn.Parent = TabButtons
-
-local Tab2Btn = Instance.new("TextButton")
-Tab2Btn.Size = UDim2.fromScale(0.25, 1)
-Tab2Btn.Position = UDim2.fromScale(0.25, 0)
-Tab2Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-Tab2Btn.Font = Enum.Font.GothamBold
-Tab2Btn.Text = "TELEPORT"
-Tab2Btn.TextColor3 = Color3.new(1,1,1)
-Tab2Btn.TextScaled = true
-Tab2Btn.Name = "Tab2"
-Tab2Btn.Parent = TabButtons
-
-local Tab3Btn = Instance.new("TextButton")
-Tab3Btn.Size = UDim2.fromScale(0.25, 1)
-Tab3Btn.Position = UDim2.fromScale(0.50, 0)
-Tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-Tab3Btn.Font = Enum.Font.GothamBold
-Tab3Btn.Text = "SETTINGS"
-Tab3Btn.TextColor3 = Color3.new(1,1,1)
-Tab3Btn.TextScaled = true
-Tab3Btn.Name = "Tab3"
-Tab3Btn.Parent = TabButtons
-
-local Tab4Btn = Instance.new("TextButton")
-Tab4Btn.Size = UDim2.fromScale(0.25, 1)
-Tab4Btn.Position = UDim2.fromScale(0.75, 0)
-Tab4Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-Tab4Btn.Font = Enum.Font.GothamBold
-Tab4Btn.Text = "MISC"
-Tab4Btn.TextColor3 = Color3.new(1,1,1)
-Tab4Btn.TextScaled = true
-Tab4Btn.Name = "Tab4"
-Tab4Btn.Parent = TabButtons
-
---// Contenedores de pestanas
-local Tab1_Content = Instance.new("ScrollingFrame")
-Tab1_Content.Name = "Tab1Content"
-Tab1_Content.Size = UDim2.new(1, -10, 1, -120)
-Tab1_Content.Position = UDim2.new(0, 5, 0, 115)
-Tab1_Content.BackgroundTransparency = 1
-Tab1_Content.BorderSizePixel = 0
-Tab1_Content.ScrollBarThickness = 6
-Tab1_Content.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
-Tab1_Content.CanvasSize = UDim2.new(0, 0, 3, 0)
-Tab1_Content.Parent = MainFrame
-
-local Tab2_Content = Instance.new("ScrollingFrame")
-Tab2_Content.Name = "Tab2Content"
-Tab2_Content.Size = UDim2.new(1, -10, 1, -120)
-Tab2_Content.Position = UDim2.new(0, 5, 0, 115)
-Tab2_Content.BackgroundTransparency = 1
-Tab2_Content.BorderSizePixel = 0
-Tab2_Content.ScrollBarThickness = 6
-Tab2_Content.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
-Tab2_Content.CanvasSize = UDim2.new(0, 0, 4, 0)
-Tab2_Content.Visible = false
-Tab2_Content.Parent = MainFrame
-
-local Tab3_Content = Instance.new("ScrollingFrame")
-Tab3_Content.Name = "Tab3Content"
-Tab3_Content.Size = UDim2.new(1, -10, 1, -120)
-Tab3_Content.Position = UDim2.new(0, 5, 0, 115)
-Tab3_Content.BackgroundTransparency = 1
-Tab3_Content.BorderSizePixel = 0
-Tab3_Content.ScrollBarThickness = 6
-Tab3_Content.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
-Tab3_Content.CanvasSize = UDim2.new(0, 0, 2, 0)
-Tab3_Content.Visible = false
-Tab3_Content.Parent = MainFrame
-
-local Tab4_Content = Instance.new("ScrollingFrame")
-Tab4_Content.Name = "Tab4Content"
-Tab4_Content.Size = UDim2.new(1, -10, 1, -120)
-Tab4_Content.Position = UDim2.new(0, 5, 0, 115)
-Tab4_Content.BackgroundTransparency = 1
-Tab4_Content.BorderSizePixel = 0
-Tab4_Content.ScrollBarThickness = 6
-Tab4_Content.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
-Tab4_Content.CanvasSize = UDim2.new(0, 0, 2, 0)
-Tab4_Content.Visible = false
-Tab4_Content.Parent = MainFrame
-
--- UIListLayouts
-local UIListLayout1 = Instance.new("UIListLayout")
-UIListLayout1.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout1.Padding = UDim.new(0, 10)
-UIListLayout1.Parent = Tab1_Content
-
-local UIListLayout2 = Instance.new("UIListLayout")
-UIListLayout2.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout2.Padding = UDim.new(0, 8)
-UIListLayout2.Parent = Tab2_Content
-
-local UIListLayout3 = Instance.new("UIListLayout")
-UIListLayout3.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout3.Padding = UDim.new(0, 10)
-UIListLayout3.Parent = Tab3_Content
-
-local UIListLayout4 = Instance.new("UIListLayout")
-UIListLayout4.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout4.Padding = UDim.new(0, 10)
-UIListLayout4.Parent = Tab4_Content
-
--- UIPadding
-local function AddPadding(frame)
-    local pad = Instance.new("UIPadding")
-    pad.PaddingTop = UDim.new(0, 10)
-    pad.PaddingLeft = UDim.new(0, 10)
-    pad.PaddingRight = UDim.new(0, 10)
-    pad.Parent = frame
-end
-
-AddPadding(Tab1_Content)
-AddPadding(Tab2_Content)
-AddPadding(Tab3_Content)
-AddPadding(Tab4_Content)
-
---// ============================================================
---// FUNCIONES DE UTILIDAD
---// ============================================================
-
-local function getMyHRP()
-    local char = player.Character
-    return char and char:FindFirstChild("HumanoidRootPart")
-end
-
-local function getMyHumanoid()
-    local char = player.Character
-    return char and char:FindFirstChild("Humanoid")
-end
-
-local function notify(text, color)
-    pcall(function()
-        local StarterGui = game:GetService("StarterGui")
-        StarterGui:SetCore("SendNotification", {
-            Title = "Blox Fruits Ultimate",
-            Text = text,
-            Duration = 3,
-            Icon = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-        })
-    end)
-end
-
---// ============================================================
---// FUNCIONES DE TELEPORT
---// ============================================================
-
-local function teleportTo(position)
-    pcall(function()
-        local hrp = getMyHRP()
-        if hrp then
-            hrp.CFrame = CFrame.new(position)
-            notify("Teletransportado!")
-        end
-    end)
-end
-
---// ============================================================
---// FUNCIONES DE AUTO FARM
---// ============================================================
-
-function getClosestEnemy(isBossMode, maxDist)
-    local hrp = getMyHRP()
-    if not hrp then return nil end
-    
-    if not workspace:FindFirstChild("Enemies") then return nil end
-    
-    local myLevel = Level.Value
-    local closestEnemy = nil
-    local shortestDistance = maxDist or 1000
-    
-    for _, v in pairs(workspace.Enemies:GetChildren()) do
-        local Humanoid = v:FindFirstChild("Humanoid")
-        local RootPart = v:FindFirstChild("HumanoidRootPart")
-        if Humanoid and RootPart and Humanoid.Health > 0 then
-            local distance = (hrp.Position - RootPart.Position).Magnitude
-            if distance < shortestDistance then
-                local name = v.Name
-                local hasBoss = string.find(name:lower(), "boss")
-                
-                if isBossMode then
-                    if hasBoss then
-                        closestEnemy = v
-                        shortestDistance = distance
-                    end
-                else
-                    if not hasBoss then
-                        local enemyLvl = tonumber(name:match("%d+")) or 0
-                        if enemyLvl >= myLevel - 150 and enemyLvl <= myLevel + 50 then
-                            closestEnemy = v
-                            shortestDistance = distance
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return closestEnemy
-end
-
---// ============================================================
---// KILL AURA
---// ============================================================
-
-local function startKillAura()
-    if killAuraConnection then return end
-    
-    killAuraConnection = RunService.Heartbeat:Connect(function()
-        pcall(function()
-            local char = player.Character
-            if not char or not char:FindFirstChild("Humanoid") then return end
-            
-            local hrp = getMyHRP()
-            if not hrp then return end
-            
-            local tool = char:FindFirstChildOfClass("Tool")
-            if not tool then return end
-            
-            for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                local eHum = enemy:FindFirstChild("Humanoid")
-                local eHRP = enemy:FindFirstChild("HumanoidRootPart")
-                if eHum and eHRP and eHum.Health > 0 then
-                    local distance = (hrp.Position - eHRP.Position).Magnitude
-                    if distance <= 20 then
-                        VirtualUser:ClickButton1(Vector2.new())
-                        task.wait(0.1)
-                    end
-                end
-            end
-        end)
-    end)
-end
-
-local function stopKillAura()
-    if killAuraConnection then
-        killAuraConnection:Disconnect()
-        killAuraConnection = nil
-    end
-end
-
---// ============================================================
-// FUNCIONES DE FRUIT SNIPER
---// ============================================================
-
-local function startFruitSniper()
-    if fruitConnection then return end
-    
-    fruitConnection = RunService.Heartbeat:Connect(function()
-        pcall(function()
-            if not fruitSniperEnabled then return end
-            
-            for _, v in pairs(workspace:GetChildren()) do
-                if v:IsA("Tool") and v:FindFirstChild("Handle") then
-                    local fruitName = v.Name
-                    if fruitName ~= "Combat" and fruitName ~= "Blox Fruit Dealer" then
-                        local hrp = getMyHRP()
-                        if hrp then
-                            hrp.CFrame = v.Handle.CFrame
-                            notify("🍎 Fruit Sniper: " .. fruitName .. " capturado!")
-                            task.wait(0.5)
-                        end
-                    end
-                end
-            end
-        end)
-    end)
-end
-
---// ============================================================
---// FUNCIONES DE ESP
---// ============================================================
-
-local function createESP(obj, espType, color)
-    pcall(function()
-        if not obj or not obj:FindFirstChild("HumanoidRootPart") then return end
-        
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "ESP_" .. espType
-        billboard.Adornee = obj.HumanoidRootPart
-        billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.StudsOffset = Vector3.new(0, 3, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Parent = obj.HumanoidRootPart
-        
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, 0, 1, 0)
-        frame.BackgroundColor3 = color
-        frame.BackgroundTransparency = 0.5
-        frame.BorderSizePixel = 0
-        frame.Parent = billboard
-        
-        local text = Instance.new("TextLabel")
-        text.Size = UDim2.new(1, 0, 1, 0)
-        text.BackgroundTransparency = 1
-        text.Text = espType .. "\n" .. obj.Name
-        text.TextColor3 = Color3.new(1,1,1)
-        text.TextScaled = true
-        text.Font = Enum.Font.GothamBold
-        text.Parent = frame
-        
-        table.insert(espObjects, billboard)
-    end)
-end
-
-local function startESP()
-    if espConnection then return end
-    
-    espConnection = RunService.Heartbeat:Connect(function()
-        pcall(function()
-            if not espEnabled then return end
-            
-            -- Limpiar ESP antiguo
-            for i, obj in pairs(espObjects) do
-                if obj and obj.Parent then
-                    obj:Destroy()
-                end
-            end
-            espObjects = {}
-            
-            -- ESP de Enemigos
-            if workspace:FindFirstChild("Enemies") then
-                for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                    local eHum = enemy:FindFirstChild("Humanoid")
-                    local eHRP = enemy:FindFirstChild("HumanoidRootPart")
-                    if eHum and eHRP and eHum.Health > 0 then
-                        createESP(enemy, "ENEMY", Color3.fromRGB(255, 50, 50))
-                    end
-                end
-            end
-            
-            -- ESP de Jugadores
-            for _, plr in pairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                    local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        createESP(plr.Character, "PLAYER", Color3.fromRGB(50, 255, 50))
-                    end
-                end
-            end
-            
-            task.wait(1)
-        end)
-    end)
-end
-
-local function stopESP()
-    if espConnection then
-        espConnection:Disconnect()
-        espConnection = nil
-    end
-    
-    for i, obj in pairs(espObjects) do
-        if obj and obj.Parent then
-            obj:Destroy()
-        end
-    end
-    espObjects = {}
-end
-
---// ============================================================
---// FUNCIONES DE AUTO STATS
---// ============================================================
-
-local function autoStats()
-    pcall(function()
-        local points = Data.Points
-        if points and points.Value > 0 then
-            -- Distribuir puntos equilibradamente
-            local melee = Data.Melee
-            local defense = Data.Defense
-            local sword = Data.Sword
-            local gun = Data.Gun
-            local fruit = Data.Fruit
-            
-            if melee then melee.Value = melee.Value + 1 end
-            task.wait(0.1)
-            if defense then defense.Value = defense.Value + 1 end
-            task.wait(0.1)
-            if sword then sword.Value = sword.Value + 1 end
-            task.wait(0.1)
-            if gun then gun.Value = gun.Value + 1 end
-            task.wait(0.1)
-            if fruit then fruit.Value = fruit.Value + 1 end
-        end
-    end)
-end
-
---// ============================================================
---// FUNCIONES DE AUTO QUEST
---// ============================================================
-
-local function getQuestNPC()
-    pcall(function()
-        local questFolder = workspace:FindFirstChild("QuestNPC")
-        if not questFolder then return nil end
-        
-        local myLevel = Level.Value
-        for _, npc in pairs(questFolder:GetChildren()) do
-            local lvl = tonumber(npc.Name:match("%d+")) or 0
-            if lvl >= myLevel - 50 and lvl <= myLevel + 50 then
-                return npc
-            end
-        end
-        return nil
-    end)
-end
-
---// ============================================================
---// FUNCIONES DE AUTO FARM PRINCIPAL
---// ============================================================
-
-local function startFarmConnection()
-    if farmConnection then return end
-    
-    farmConnection = RunService.Heartbeat:Connect(function()
-        pcall(function()
-            local char = player.Character
-            if not char or not char:FindFirstChild("Humanoid") or char.Humanoid.Health <= 0 then return end
-            
-            local hrp = getMyHRP()
-            if not hrp then return end
-            
-            -- Auto Stats
-            if autoStatsEnabled then
-                autoStats()
-            end
-            
-            -- Auto Farm Nivel
-            if autoFarmLevelEnabled then
-                local enemy = getClosestEnemy(false, 1200)
-                if enemy and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") then
-                    if enemy.Humanoid.Health > 0 then
-                        local ehrp = enemy.HumanoidRootPart
-                        local targetCF = ehrp.CFrame * CFrame.new(math.random(-5,5)*0.1, 0, math.random(-5,5)*0.1)
-                        hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.35)
-                        VirtualUser:ClickButton1(Vector2.new())
-                    end
-                end
-            end
-            
-            -- Auto Farm Boss
-            if autoFarmBossEnabled then
-                local enemy = getClosestEnemy(true, 2500)
-                if enemy and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") then
-                    if enemy.Humanoid.Health > 0 then
-                        local ehrp = enemy.HumanoidRootPart
-                        local targetCF = ehrp.CFrame * CFrame.new(math.random(-8,8)*0.1, math.random(3,8), math.random(-12,-6))
-                        hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.45)
-                        VirtualUser:ClickButton1(Vector2.new())
-                    end
-                end
-            end
-        end)
-    end)
-end
-
-local function stopFarmConnection()
-    if farmConnection then
-        farmConnection:Disconnect()
-        farmConnection = nil
-    end
-end
-
-local function updateFarmConnection()
-    if autoFarmLevelEnabled or autoFarmBossEnabled or autoFarmMasteryEnabled then
-        startFarmConnection()
-    else
-        stopFarmConnection()
-    end
-end
-
---// ============================================================
---// ANIMACIONES
---// ============================================================
-
-local tweenInfo = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local openPosition = UDim2.fromScale(0.29, 0.12)
-local closePosition = UDim2.fromScale(0.29, 1.2)
-
-local function OpenMenu()
-    MainFrame.Visible = true
-    TweenService:Create(MainFrame, tweenInfo, {Position = openPosition}):Play()
-end
-
-local function CloseMenu()
-    local tween = TweenService:Create(MainFrame, tweenInfo, {Position = closePosition})
-    tween:Play()
-    tween.Completed:Connect(function()
-        MainFrame.Visible = false
-    end)
-end
-
-OpenButton.MouseButton1Click:Connect(OpenMenu)
-CloseBtn.MouseButton1Click:Connect(CloseMenu)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.M then
-        if MainFrame.Visible then
-            CloseMenu()
-        else
-            OpenMenu()
-        end
-    end
-end)
-
---// ============================================================
---// CAMBIO DE PESTANAS
---// ============================================================
-
-local function switchTab(tabNum)
-    Tab1_Content.Visible = false
-    Tab2_Content.Visible = false
-    Tab3_Content.Visible = false
-    Tab4_Content.Visible = false
-    
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    Tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    Tab4Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    
-    if tabNum == 1 then
-        Tab1_Content.Visible = true
-        Tab1Btn.BackgroundColor3 = Color3.fromRGB(60, 60, 90)
-    elseif tabNum == 2 then
-        Tab2_Content.Visible = true
-        Tab2Btn.BackgroundColor3 = Color3.fromRGB(60, 60, 90)
-    elseif tabNum == 3 then
-        Tab3_Content.Visible = true
-        Tab3Btn.BackgroundColor3 = Color3.fromRGB(60, 60, 90)
-    elseif tabNum == 4 then
-        Tab4_Content.Visible = true
-        Tab4Btn.BackgroundColor3 = Color3.fromRGB(60, 60, 90)
-    end
-end
-
-Tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
-Tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
-Tab3Btn.MouseButton1Click:Connect(function() switchTab(3) end)
-Tab4Btn.MouseButton1Click:Connect(function() switchTab(4) end)
-
---// ============================================================
---// FUNCION PARA CREAR BOTONES TOGGLE
---// ============================================================
-
-local function createToggleButton(name, toggleFunc, parent, description)
-    local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Size = UDim2.new(1, -20, 0, 50)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.GothamBold
-    btn.Text = name .. " [OFF]"
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.TextScaled = true
-    btn.LayoutOrder = 1
-    btn.Parent = parent
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 12)
-    btnCorner.Parent = btn
-    
-    local btnGradient = Instance.new("UIGradient")
-    btnGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(70,70,100)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(40,40,70))
-    }
-    btnGradient.Rotation = 45
-    btnGradient.Parent = btn
-    
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60,60,90)}):Play()
-    end)
-    
-    btn.MouseLeave:Connect(function()
-        local isOn = btn.Text:find("[ON]")
-        local offColor = isOn and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50,50,80)
-        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = offColor}):Play()
-    end)
-    
-    btn.MouseButton1Click:Connect(toggleFunc)
-    
-    return btn
-end
-
---// ============================================================
---// CREAR LABELS
---// ============================================================
-
-local function createLabel(text, parent)
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -20, 0, 30)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBold
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(150, 200, 255)
-    label.TextScaled = true
-    label.LayoutOrder = 0
-    label.Parent = parent
-    return label
-end
-
---// ============================================================
---// PESTANA 1: MAIN
---// ============================================================
-
-createLabel("⚔️ AUTO FARM", Tab1_Content)
-
--- Auto Farm Nivel
-local farmLevelBtn
-local function toggleFarmLevel()
-    autoFarmLevelEnabled = not autoFarmLevelEnabled
-    local status = autoFarmLevelEnabled and " [ON]" or " [OFF]"
-    local color = autoFarmLevelEnabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50,50,80)
-    farmLevelBtn.Text = "Auto Farm Nivel" .. status
-    farmLevelBtn.BackgroundColor3 = color
-    updateFarmConnection()
-    notify("Auto Farm Nivel: " .. (autoFarmLevelEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-farmLevelBtn = createToggleButton("Auto Farm Nivel", toggleFarmLevel, Tab1_Content)
-
--- Auto Farm Boss
-local farmBossBtn
-local function toggleFarmBoss()
-    autoFarmBossEnabled = not autoFarmBossEnabled
-    local status = autoFarmBossEnabled and " [ON]" or " [OFF]"
-    local color = autoFarmBossEnabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50,50,80)
-    farmBossBtn.Text = "Auto Farm Boss" .. status
-    farmBossBtn.BackgroundColor3 = color
-    updateFarmConnection()
-    notify("Auto Farm Boss: " .. (autoFarmBossEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-farmBossBtn = createToggleButton("Auto Farm Boss", toggleFarmBoss, Tab1_Content)
-
--- Auto Farm Mastery
-local farmMasteryBtn
-local function toggleFarmMastery()
-    autoFarmMasteryEnabled = not autoFarmMasteryEnabled
-    local status = autoFarmMasteryEnabled and " [ON]" or " [OFF]"
-    local color = autoFarmMasteryEnabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50,50,80)
-    farmMasteryBtn.Text = "Auto Farm Mastery" .. status
-    farmMasteryBtn.BackgroundColor3 = color
-    updateFarmConnection()
-    notify("Auto Farm Mastery: " .. (autoFarmMasteryEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-farmMasteryBtn = createToggleButton("Auto Farm Mastery", toggleFarmMastery, Tab1_Content)
-
--- Kill Aura
-local killAuraBtn
-local function toggleKillAura()
-    killAuraEnabled = not killAuraEnabled
-    local status = killAuraEnabled and " [ON]" or " [OFF]"
-    local color = killAuraEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(50,50,80)
-    killAuraBtn.Text = "Kill Aura" .. status
-    killAuraBtn.BackgroundColor3 = color
-    
-    if killAuraEnabled then
-        startKillAura()
-    else
-        stopKillAura()
-    end
-    notify("Kill Aura: " .. (killAuraEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-killAuraBtn = createToggleButton("Kill Aura", toggleKillAura, Tab1_Content)
-
-createLabel("", Tab1_Content)
-createLabel("🎯 HABILIDADES ESPECIALES", Tab1_Content)
-
--- Fruit Sniper
-local fruitSniperBtn
-local function toggleFruitSniper()
-    fruitSniperEnabled = not fruitSniperEnabled
-    local status = fruitSniperEnabled and " [ON]" or " [OFF]"
-    local color = fruitSniperEnabled and Color3.fromRGB(255, 150, 50) or Color3.fromRGB(50,50,80)
-    fruitSniperBtn.Text = "Fruit Sniper" .. status
-    fruitSniperBtn.BackgroundColor3 = color
-    
-    if fruitSniperEnabled then
-        startFruitSniper()
-    end
-    notify("Fruit Sniper: " .. (fruitSniperEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-fruitSniperBtn = createToggleButton("Fruit Sniper", toggleFruitSniper, Tab1_Content)
-
--- ESP
-local espBtn
-local function toggleESP()
-    espEnabled = not espEnabled
-    local status = espEnabled and " [ON]" or " [OFF]"
-    local color = espEnabled and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(50,50,80)
-    espBtn.Text = "ESP (Players/Enemies)" .. status
-    espBtn.BackgroundColor3 = color
-    
-    if espEnabled then
-        startESP()
-    else
-        stopESP()
-    end
-    notify("ESP: " .. (espEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-espBtn = createToggleButton("ESP (Players/Enemies)", toggleESP, Tab1_Content)
-
--- Auto Stats
-local autoStatsBtn
-local function toggleAutoStats()
-    autoStatsEnabled = not autoStatsEnabled
-    local status = autoStatsEnabled and " [ON]" or " [OFF]"
-    local color = autoStatsEnabled and Color3.fromRGB(150, 50, 255) or Color3.fromRGB(50,50,80)
-    autoStatsBtn.Text = "Auto Stats" .. status
-    autoStatsBtn.BackgroundColor3 = color
-    updateFarmConnection()
-    notify("Auto Stats: " .. (autoStatsEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-autoStatsBtn = createToggleButton("Auto Stats", toggleAutoStats, Tab1_Content)
-
--- Auto Quest
-local autoQuestBtn
-local function toggleAutoQuest()
-    autoQuestEnabled = not autoQuestEnabled
-    local status = autoQuestEnabled and " [ON]" or " [OFF]"
-    local color = autoQuestEnabled and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(50,50,80)
-    autoQuestBtn.Text = "Auto Quest" .. status
-    autoQuestBtn.BackgroundColor3 = color
-    updateFarmConnection()
-    notify("Auto Quest: " .. (autoQuestEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-autoQuestBtn = createToggleButton("Auto Quest", toggleAutoQuest, Tab1_Content)
-
--- Auto Raid
-local autoRaidBtn
-local function toggleAutoRaid()
-    autoRaidEnabled = not autoRaidEnabled
-    local status = autoRaidEnabled and " [ON]" or " [OFF]"
-    local color = autoRaidEnabled and Color3.fromRGB(255, 50, 150) or Color3.fromRGB(50,50,80)
-    autoRaidBtn.Text = "Auto Raid" .. status
-    autoRaidBtn.BackgroundColor3 = color
-    updateFarmConnection()
-    notify("Auto Raid: " .. (autoRaidEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-autoRaidBtn = createToggleButton("Auto Raid", toggleAutoRaid, Tab1_Content)
-
---// ============================================================
---// PESTANA 2: TELEPORT
---// ============================================================
-
-createLabel("🏝️ TELEPORT A ISLAS", Tab2_Content)
-
--- Crear botones de teleport para cada isla
-local islandNames = {"Starter", "Shell Town", "Shark Park", "Arlong Park", "Baratie", 
-                     "Orange Town", "Syrup Village", "Marine Fortress", "Arctic", 
-                     "Graveyard", "Desert", "Frozen Village", "Jungle", "Pirate Village",
-                     "Magma Village", "Underwater City", "Skylands", "Prison", "Colosseum",
-                     "Factory", "Cursed Ship", "Ice Castle", "Forgotten Island", "Green Zone",
-                     "Graveyard Island", "Hot and Cold", "Dark Arena", "Cake Land"}
-
-for _, islandName in pairs(islandNames) do
-    local btn = Instance.new("TextButton")
-    btn.Name = "TP_" .. islandName
-    btn.Size = UDim2.new(0.48, -5, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(60, 80, 120)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.GothamBold
-    btn.Text = "🏝️ " .. islandName
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.TextScaled = true
-    btn.Parent = Tab2_Content
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
-    btnCorner.Parent = btn
-    
-    btn.MouseButton1Click:Connect(function()
-        if islands[islandName] then
-            teleportTo(islands[islandName])
-        else
-            notify("Isla no encontrada", Color3.fromRGB(255,0,0))
-        end
-    end)
-end
-
---// ============================================================
---// PESTANA 3: SETTINGS
---// ============================================================
-
-createLabel("⚙️ CONFIGURACION", Tab3_Content)
-
--- Velocidad del jugador
-local speedBtn
-local speedEnabled = false
-local function toggleSpeed()
-    speedEnabled = not speedEnabled
-    local status = speedEnabled and " [ON]" or " [OFF]"
-    local color = speedEnabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50,50,80)
-    speedBtn.Text = "Speed Hack" .. status
-    speedBtn.BackgroundColor3 = color
-    
-    if speedEnabled then
-        pcall(function()
-            local humanoid = getMyHumanoid()
-            if humanoid then
-                humanoid.WalkSpeed = 100
-            end
-        end)
-    else
-        pcall(function()
-            local humanoid = getMyHumanoid()
-            if humanoid then
-                humanoid.WalkSpeed = 16
-            end
-        end)
-    end
-end
-speedBtn = createToggleButton("Speed Hack", toggleSpeed, Tab3_Content)
-
--- Jump Power
-local jumpBtn
-local jumpEnabled = false
-local function toggleJump()
-    jumpEnabled = not jumpEnabled
-    local status = jumpEnabled and " [ON]" or " [OFF]"
-    local color = jumpEnabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50,50,80)
-    jumpBtn.Text = "Super Jump" .. status
-    jumpBtn.BackgroundColor3 = color
-    
-    if jumpEnabled then
-        pcall(function()
-            local humanoid = getMyHumanoid()
-            if humanoid then
-                humanoid.JumpPower = 150
-            end
-        end)
-    else
-        pcall(function()
-            local humanoid = getMyHumanoid()
-            if humanoid then
-                humanoid.JumpPower = 50
-            end
-        end)
-    end
-end
-jumpBtn = createToggleButton("Super Jump", toggleJump, Tab3_Content)
-
--- God Mode
-local godModeBtn
-local godModeEnabled = false
-local function toggleGodMode()
-    godModeEnabled = not godModeEnabled
-    local status = godModeEnabled and " [ON]" or " [OFF]"
-    local color = godModeEnabled and Color3.fromRGB(255, 255, 50) or Color3.fromRGB(50,50,80)
-    godModeBtn.Text = "God Mode" .. status
-    godModeBtn.BackgroundColor3 = color
-    
-    pcall(function()
-        local humanoid = getMyHumanoid()
-        if humanoid then
-            humanoid.MaxHealth = godModeEnabled and 9e9 or 100
-            humanoid.Health = humanoid.MaxHealth
-        end
-    end)
-    
-    notify("God Mode: " .. (godModeEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-godModeBtn = createToggleButton("God Mode", toggleGodMode, Tab3_Content)
-
--- No Clip
-local noClipBtn
-local noClipEnabled = false
-local function toggleNoClip()
-    noClipEnabled = not noClipEnabled
-    local status = noClipEnabled and " [ON]" or " [OFF]"
-    local color = noClipEnabled and Color3.fromRGB(150, 150, 255) or Color3.fromRGB(50,50,80)
-    noClipBtn.Text = "No Clip" .. status
-    noClipBtn.BackgroundColor3 = color
-    
-    pcall(function()
-        local char = player.Character
-        if char then
-            for _, part in pairs(char:GetChildren()) do
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                    part.CanCollide = not noClipEnabled
-                end
-            end
-        end
-    end)
-    
-    notify("No Clip: " .. (noClipEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-noClipBtn = createToggleButton("No Clip", toggleNoClip, Tab3_Content)
-
---// ============================================================
---// PESTANA 4: MISC
---// ============================================================
-
-createLabel("🎮 FUNCIONES VARIAS", Tab4_Content)
-
--- Auto Buy Medkit
-local autoBuyMedkitBtn
-local function toggleAutoBuyMedkit()
-    _G.autoBuyMedkit = not _G.autoBuyMedkit
-    local status = _G.autoBuyMedkit and " [ON]" or " [OFF]"
-    local color = _G.autoBuyMedkit and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50,50,80)
-    autoBuyMedkitBtn.Text = "Auto Buy Medkit" .. status
-    autoBuyMedkitBtn.BackgroundColor3 = color
-    notify("Auto Buy Medkit: " .. (_G.autoBuyMedkit and "ACTIVADO" or "DESACTIVADO"))
-end
-autoBuyMedkitBtn = createToggleButton("Auto Buy Medkit", toggleAutoBuyMedkit, Tab4_Content)
-
--- Auto Redeem Codes
-local redeemCodesBtn
-local function redeemCodes()
-    pcall(function()
-        local codes = {"SUB2GAMERROBOT_EXP1", "SUB2NOOBMASTER123", "SUB2UNCLEKIZARU", 
-                       "SUB2DAIGROCK", "Axiore", "TantaiGaming", "STRAWHATMAINE", 
-                       "SUB2CAPTAINMAUI", "DEVSCOOKING", "NOOB2ADMIN", "TYFOR1BVISIT"}
-        
-        for _, code in pairs(codes) do
-            ReplicatedStorage:WaitForChild("Remotes").Redeem:InvokeServer(code)
-            task.wait(0.5)
-        end
-        notify("🎁 Codigos canjeados!")
-    end)
-end
-redeemCodesBtn = createToggleButton("Redeem All Codes", redeemCodes, Tab4_Content)
-
--- Remove Fog
-local removeFogBtn
-local function removeFog()
-    pcall(function()
-        local lighting = game:GetService("Lighting")
-        lighting.FogEnd = 100000
-        lighting.FogStart = 0
-        notify("🌫️ Niebla eliminada!")
-    end)
-end
-removeFogBtn = createToggleButton("Remove Fog", removeFog, Tab4_Content)
-
--- Full Bright
-local fullBrightBtn
-local fullBrightEnabled = false
-local function toggleFullBright()
-    fullBrightEnabled = not fullBrightEnabled
-    local status = fullBrightEnabled and " [ON]" or " [OFF]"
-    local color = fullBrightEnabled and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(50,50,80)
-    fullBrightBtn.Text = "Full Bright" .. status
-    fullBrightBtn.BackgroundColor3 = color
-    
-    pcall(function()
-        local lighting = game:GetService("Lighting")
-        if fullBrightEnabled then
-            lighting.Brightness = 5
-            lighting.GlobalShadows = false
-            lighting.Ambient = Color3.new(1,1,1)
-        else
-            lighting.Brightness = 2
-            lighting.GlobalShadows = true
-            lighting.Ambient = Color3.new(0.5,0.5,0.5)
-        end
-    end)
-    
-    notify("Full Bright: " .. (fullBrightEnabled and "ACTIVADO" or "DESACTIVADO"))
-end
-fullBrightBtn = createToggleButton("Full Bright", toggleFullBright, Tab4_Content)
-
---// ============================================================
---// EVENTOS Y LISTENERS
---// ============================================================
-
-player.CharacterAdded:Connect(function()
-    task.wait(8)
-    updateFarmConnection()
-    
-    -- Reaplicar settings al respawnear
-    if speedEnabled then
-        pcall(function()
-            local humanoid = getMyHumanoid()
-            if humanoid then
-                humanoid.WalkSpeed = 100
-            end
-        end)
-    end
-    
-    if jumpEnabled then
-        pcall(function()
-            local humanoid = getMyHumanoid()
-            if humanoid then
-                humanoid.JumpPower = 150
-            end
-        end)
-    end
-end)
-
--- Anti-AFK mejorado
 task.spawn(function()
     while true do
-        task.wait(math.random(45, 75))
-        pcall(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
-        end)
+        local Tween = TweenService:Create(Gradient, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Rotation = Gradient.Rotation + 180})
+        Tween:Play()
+        Tween.Completed:Wait()
     end
 end)
 
--- Auto Buy Medkit loop
+--// Title Label
+local Title = Instance.new("TextLabel")
+Title.Parent = Frame
+Title.Size = UDim2.new(1, 0, 0, 28)
+Title.BackgroundTransparency = 1
+Title.Text = "🛡️ AntiAFK + AntiKick V3.2"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+--// Timer Label
+local TimerLabel = Instance.new("TextLabel")
+TimerLabel.Parent = Frame
+TimerLabel.Size = UDim2.new(1, 0, 0, 22)
+TimerLabel.Position = UDim2.new(0, 0, 0, 32)
+TimerLabel.BackgroundTransparency = 1
+TimerLabel.Text = "AFK Time: 0 seconds"
+TimerLabel.Font = Enum.Font.Gotham
+TimerLabel.TextSize = 12
+TimerLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+
+--// Scrolling Frame for Kick Logs
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Parent = Frame
+ScrollFrame.Size = UDim2.new(1, -10, 1, -85)
+ScrollFrame.Position = UDim2.new(0, 5, 0, 58)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.ScrollBarThickness = 3
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Parent = ScrollFrame
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Padding = UDim.new(0, 3)
+
+--// Clear Logs Button
+local ClearLogsButton = Instance.new("TextButton")
+ClearLogsButton.Parent = Frame
+ClearLogsButton.Size = UDim2.new(1, -10, 0, 24)
+ClearLogsButton.Position = UDim2.new(0, 5, 1, -28)
+ClearLogsButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ClearLogsButton.Text = "🗑️ Clear Logs"
+ClearLogsButton.Font = Enum.Font.GothamBold
+ClearLogsButton.TextSize = 13
+ClearLogsButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+
+-- Smooth edges for Clear Button
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 6)
+ButtonCorner.Parent = ClearLogsButton
+
+--// Toggle Visibility Button (Outside GUI)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Parent = ScreenGui
+ToggleButton.Size = UDim2.new(0, 140, 0, 30)
+ToggleButton.Position = UDim2.new(0.5, -70, 0, -24)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+ToggleButton.Text = "👁️ Hide AntiAFK GUI"
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 12
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.Parent = ToggleButton
+
+--// Function to Toggle GUI
+local isVisible = true
+ToggleButton.MouseButton1Click:Connect(function()
+    isVisible = not isVisible
+    Frame.Visible = isVisible
+    ToggleButton.Text = isVisible and "👁️ Hide AntiAFK GUI" or "👁️ Show AntiAFK GUI"
+end)
+
+--// Function to Format AFK Time
+local function formatTime(seconds)
+    local days = math.floor(seconds / 86400)
+    seconds = seconds % 86400
+    local hours = math.floor(seconds / 3600)
+    seconds = seconds % 3600
+    local minutes = math.floor(seconds / 60)
+    local secs = seconds % 60
+    
+    local result = ""
+    if days > 0 then result = result .. days .. " days, " end
+    if hours > 0 then result = result .. hours .. " hours, " end
+    if minutes > 0 then result = result .. minutes .. " minutes, " end
+    result = result .. secs .. " seconds"
+    
+    return result
+end
+
+--// AntiAFK System
+local afkTime = 0
+local function preventAFK()
+    game:GetService("Players").LocalPlayer.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+
+        -- Log Kick Attempt
+        local Log = Instance.new("TextLabel")
+        Log.Parent = ScrollFrame
+        Log.Size = UDim2.new(1, -5, 0, 20)
+        Log.BackgroundTransparency = 1
+        Log.Text = "❌ Kick prevented at " .. formatTime(afkTime)
+        Log.Font = Enum.Font.Gotham
+        Log.TextSize = 12
+        Log.TextColor3 = Color3.fromRGB(255, 100, 100)
+        Log.TextXAlignment = Enum.TextXAlignment.Left
+
+        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 5)
+    end)
+end
+
+--// Clear Logs Function
+ClearLogsButton.MouseButton1Click:Connect(function()
+    for _, v in pairs(ScrollFrame:GetChildren()) do
+        if v:IsA("TextLabel") then v:Destroy() end
+    end
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+end)
+
+--// AFK Timer System
 task.spawn(function()
+    preventAFK()
     while true do
         task.wait(1)
-        pcall(function()
-            if _G.autoBuyMedkit then
-                ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("BuyItem", "Med Kit")
-            end
-        end)
+        afkTime = afkTime + 1
+        TimerLabel.Text = "AFK Time: " .. formatTime(afkTime)
     end
 end)
-
--- Ajustar CanvasSize dinamicamente
-local function updateCanvas(layout)
-    local frame = layout.Parent
-    frame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
-end
-
-UIListLayout1:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvas(UIListLayout1) end)
-UIListLayout2:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvas(UIListLayout2) end)
-UIListLayout3:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvas(UIListLayout3) end)
-UIListLayout4:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvas(UIListLayout4) end)
-
---// ============================================================
---// NOTIFICACION DE CARGA
---// ============================================================
-
-print("✅ BLOX FRUITS ULTIMATE v3.0 CARGADO!")
-print("🔥 Presiona M o el boton flotante para abrir el menu")
-print("⚔️ Features: Auto Farm, Kill Aura, Fruit Sniper, ESP, Teleport, God Mode, y mas!")
-print("🎮 Integrado de los mejores hubs: Delta, Redz, Hoho, Banana, Neru, Teddy")
-notify("🎉 Blox Fruits Ultimate cargado con exito!")
