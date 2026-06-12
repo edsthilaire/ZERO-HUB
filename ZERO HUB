@@ -1,133 +1,258 @@
---// AntiAFK + AntiKick GUI (Larger & Toggle Button)
+--// AntiAFK+ Suite v4.0 - Menú Mejorado
+--// Funciones: Anti-Kick, Simulación de movimiento, Temporizador, Logs, Diseño moderno
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
---// GUI Creation
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = game.CoreGui
-ScreenGui.Name = "AntiAFKV3"
-
-local Frame = Instance.new("Frame")
-Frame.Parent = ScreenGui
-Frame.Size = UDim2.new(0, 320, 0, 280) -- Increased Size
-Frame.Position = UDim2.new(0.5, -160, 0.4, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Frame.BackgroundTransparency = 0.1
-Frame.BorderSizePixel = 0
-Frame.Active = true
-Frame.Draggable = true
-Frame.ClipsDescendants = true
-Frame.Visible = true -- Initially visible
-
---// UI Corner (Smooth Edge)
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = Frame
-
---// Neon Glow Effect
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Parent = Frame
-UIStroke.Thickness = 2.5
-UIStroke.Color = Color3.fromRGB(0, 255, 150)
-UIStroke.Transparency = 0.4
-
---// Gradient Animation
-local Gradient = Instance.new("UIGradient")
-Gradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 255)), 
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 150))
+--// Configuración por defecto
+local Settings = {
+    AntiAFK = true,
+    SimulateMovement = true,
+    MovementInterval = 60, -- segundos entre cada movimiento simulado
+    MovementType = "WASD", -- "WASD" o "Mouse"
+    ShowLogs = true,
+    UseVirtualUser = pcall(function() return VirtualUser end)
 }
-Gradient.Rotation = 90
-Gradient.Parent = Frame
 
-task.spawn(function()
-    while true do
-        local Tween = TweenService:Create(Gradient, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Rotation = Gradient.Rotation + 180})
-        Tween:Play()
-        Tween.Completed:Wait()
-    end
+--// Variables
+local afkTime = 0
+local isRunning = true
+local movementTimer = 0
+local logs = {}
+local lastActivityTime = os.clock()
+
+--// Crear GUI mejorada
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AntiAFKSuite"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = game.CoreGui
+
+--// Frame principal (más grande, con sombra)
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.Size = UDim2.new(0, 380, 0, 460)
+MainFrame.Position = UDim2.new(0.5, -190, 0.5, -230)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BackgroundTransparency = 0.15
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 16)
+MainCorner.Parent = MainFrame
+
+local Shadow = Instance.new("UIShadow")
+Shadow.Parent = MainFrame
+
+--// Título con gradiente
+local TitleFrame = Instance.new("Frame")
+TitleFrame.Parent = MainFrame
+TitleFrame.Size = UDim2.new(1, 0, 0, 45)
+TitleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+TitleFrame.BorderSizePixel = 0
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 16)
+TitleCorner.Parent = TitleFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Parent = TitleFrame
+TitleLabel.Size = UDim2.new(1, 0, 1, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "⚡ AntiAFK Suite v4.0 ⚡"
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 18
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextScaled = false
+
+--// Botón de cerrar (ocultar)
+local CloseButton = Instance.new("TextButton")
+CloseButton.Parent = TitleFrame
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -35, 0, 8)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseButton.Text = "✕"
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 18
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 8)
+CloseCorner.Parent = CloseButton
+
+CloseButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    ToggleButton.Text = MainFrame.Visible and "🙈 Ocultar Menú" or "👀 Mostrar Menú"
 end)
 
---// Title Label
-local Title = Instance.new("TextLabel")
-Title.Parent = Frame
-Title.Size = UDim2.new(1, 0, 0, 28)
-Title.BackgroundTransparency = 1
-Title.Text = "🛡️ AntiAFK + AntiKick V3.2"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-
---// Timer Label
-local TimerLabel = Instance.new("TextLabel")
-TimerLabel.Parent = Frame
-TimerLabel.Size = UDim2.new(1, 0, 0, 22)
-TimerLabel.Position = UDim2.new(0, 0, 0, 32)
-TimerLabel.BackgroundTransparency = 1
-TimerLabel.Text = "AFK Time: 0 seconds"
-TimerLabel.Font = Enum.Font.Gotham
-TimerLabel.TextSize = 12
-TimerLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-
---// Scrolling Frame for Kick Logs
-local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Parent = Frame
-ScrollFrame.Size = UDim2.new(1, -10, 1, -85)
-ScrollFrame.Position = UDim2.new(0, 5, 0, 58)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScrollFrame.ScrollBarThickness = 3
-ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
-ScrollFrame.BackgroundTransparency = 1
-ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.Parent = ScrollFrame
-ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ListLayout.Padding = UDim.new(0, 3)
-
---// Clear Logs Button
-local ClearLogsButton = Instance.new("TextButton")
-ClearLogsButton.Parent = Frame
-ClearLogsButton.Size = UDim2.new(1, -10, 0, 24)
-ClearLogsButton.Position = UDim2.new(0, 5, 1, -28)
-ClearLogsButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ClearLogsButton.Text = "🗑️ Clear Logs"
-ClearLogsButton.Font = Enum.Font.GothamBold
-ClearLogsButton.TextSize = 13
-ClearLogsButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-
--- Smooth edges for Clear Button
-local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(0, 6)
-ButtonCorner.Parent = ClearLogsButton
-
---// Toggle Visibility Button (Outside GUI)
+--// Botón flotante para mostrar/ocultar (siempre visible)
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Parent = ScreenGui
-ToggleButton.Size = UDim2.new(0, 140, 0, 30)
-ToggleButton.Position = UDim2.new(0.5, -70, 0, -24)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-ToggleButton.Text = "👁️ Hide AntiAFK GUI"
+ToggleButton.Size = UDim2.new(0, 160, 0, 35)
+ToggleButton.Position = UDim2.new(0.5, -80, 0, 20)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+ToggleButton.Text = "🙈 Ocultar Menú"
 ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.TextSize = 12
+ToggleButton.TextSize = 14
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.CornerRadius = UDim.new(0, 12)
 ToggleCorner.Parent = ToggleButton
 
---// Function to Toggle GUI
-local isVisible = true
 ToggleButton.MouseButton1Click:Connect(function()
-    isVisible = not isVisible
-    Frame.Visible = isVisible
-    ToggleButton.Text = isVisible and "👁️ Hide AntiAFK GUI" or "👁️ Show AntiAFK GUI"
+    MainFrame.Visible = not MainFrame.Visible
+    ToggleButton.Text = MainFrame.Visible and "🙈 Ocultar Menú" or "👀 Mostrar Menú"
 end)
 
---// Function to Format AFK Time
+--// Panel de estado (tiempo AFK y estado)
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Parent = MainFrame
+StatusFrame.Size = UDim2.new(1, -20, 0, 70)
+StatusFrame.Position = UDim2.new(0, 10, 0, 55)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+StatusFrame.BackgroundTransparency = 0.3
+StatusFrame.BorderSizePixel = 0
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 12)
+StatusCorner.Parent = StatusFrame
+
+local TimerText = Instance.new("TextLabel")
+TimerText.Parent = StatusFrame
+TimerText.Size = UDim2.new(1, 0, 0, 25)
+TimerText.Position = UDim2.new(0, 10, 0, 5)
+TimerText.BackgroundTransparency = 1
+TimerText.Text = "⏱️ Tiempo AFK: 0 segundos"
+TimerText.Font = Enum.Font.GothamSemibold
+TimerText.TextSize = 14
+TimerText.TextColor3 = Color3.fromRGB(200, 200, 200)
+TimerText.TextXAlignment = Enum.TextXAlignment.Left
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Parent = StatusFrame
+StatusText.Size = UDim2.new(1, 0, 0, 25)
+StatusText.Position = UDim2.new(0, 10, 0, 35)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "🔵 Estado: Activo (Anti-Kick ON)"
+StatusText.Font = Enum.Font.Gotham
+StatusText.TextSize = 13
+StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+StatusText.TextXAlignment = Enum.TextXAlignment.Left
+
+--// Separador visual
+local Separator = Instance.new("Frame")
+Separator.Parent = MainFrame
+Separator.Size = UDim2.new(1, -20, 0, 1)
+Separator.Position = UDim2.new(0, 10, 0, 135)
+Separator.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+
+--// Panel de controles (botones)
+local ControlsFrame = Instance.new("Frame")
+ControlsFrame.Parent = MainFrame
+ControlsFrame.Size = UDim2.new(1, -20, 0, 100)
+ControlsFrame.Position = UDim2.new(0, 10, 0, 150)
+ControlsFrame.BackgroundTransparency = 1
+
+-- Botón Iniciar/Detener
+local ToggleAFKButton = Instance.new("TextButton")
+ToggleAFKButton.Parent = ControlsFrame
+ToggleAFKButton.Size = UDim2.new(0, 170, 0, 40)
+ToggleAFKButton.Position = UDim2.new(0, 0, 0, 0)
+ToggleAFKButton.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+ToggleAFKButton.Text = "⏸️ Detener Anti-AFK"
+ToggleAFKButton.Font = Enum.Font.GothamBold
+ToggleAFKButton.TextSize = 14
+ToggleAFKButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local ToggleCornerBtn = Instance.new("UICorner")
+ToggleCornerBtn.CornerRadius = UDim.new(0, 8)
+ToggleCornerBtn.Parent = ToggleAFKButton
+
+-- Botón Limpiar Logs
+local ClearLogsButton = Instance.new("TextButton")
+ClearLogsButton.Parent = ControlsFrame
+ClearLogsButton.Size = UDim2.new(0, 170, 0, 40)
+ClearLogsButton.Position = UDim2.new(1, -170, 0, 0)
+ClearLogsButton.BackgroundColor3 = Color3.fromRGB(100, 50, 50)
+ClearLogsButton.Text = "🗑️ Limpiar Logs"
+ClearLogsButton.Font = Enum.Font.GothamBold
+ClearLogsButton.TextSize = 14
+ClearLogsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local ClearCorner = Instance.new("UICorner")
+ClearCorner.CornerRadius = UDim.new(0, 8)
+ClearCorner.Parent = ClearLogsButton
+
+-- Botón Simular movimiento manual
+local ManualMoveButton = Instance.new("TextButton")
+ManualMoveButton.Parent = ControlsFrame
+ManualMoveButton.Size = UDim2.new(0, 170, 0, 35)
+ManualMoveButton.Position = UDim2.new(0, 0, 0, 50)
+ManualMoveButton.BackgroundColor3 = Color3.fromRGB(60, 80, 120)
+ManualMoveButton.Text = "🕹️ Simular movimiento ahora"
+ManualMoveButton.Font = Enum.Font.Gotham
+ManualMoveButton.TextSize = 13
+ManualMoveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local ManualCorner = Instance.new("UICorner")
+ManualCorner.CornerRadius = UDim.new(0, 8)
+ManualCorner.Parent = ManualMoveButton
+
+-- Panel de Logs (ScrollingFrame)
+local LogsFrame = Instance.new("Frame")
+LogsFrame.Parent = MainFrame
+LogsFrame.Size = UDim2.new(1, -20, 1, -270)
+LogsFrame.Position = UDim2.new(0, 10, 0, 260)
+LogsFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+LogsFrame.BackgroundTransparency = 0.2
+
+local LogsCorner = Instance.new("UICorner")
+LogsCorner.CornerRadius = UDim.new(0, 10)
+LogsCorner.Parent = LogsFrame
+
+local ScrollLogs = Instance.new("ScrollingFrame")
+ScrollLogs.Parent = LogsFrame
+ScrollLogs.Size = UDim2.new(1, -10, 1, -10)
+ScrollLogs.Position = UDim2.new(0, 5, 0, 5)
+ScrollLogs.BackgroundTransparency = 1
+ScrollLogs.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollLogs.ScrollBarThickness = 4
+ScrollLogs.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+local LogsLayout = Instance.new("UIListLayout")
+LogsLayout.Parent = ScrollLogs
+LogsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+LogsLayout.Padding = UDim.new(0, 2)
+
+--// Función para agregar logs
+local function AddLog(message, color)
+    if not Settings.ShowLogs then return end
+    local log = Instance.new("TextLabel")
+    log.Parent = ScrollLogs
+    log.Size = UDim2.new(1, -5, 0, 18)
+    log.BackgroundTransparency = 1
+    log.Text = message
+    log.Font = Enum.Font.Gotham
+    log.TextSize = 11
+    log.TextColor3 = color or Color3.fromRGB(200, 200, 200)
+    log.TextXAlignment = Enum.TextXAlignment.Left
+    log.TextWrapped = true
+    
+    ScrollLogs.CanvasSize = UDim2.new(0, 0, 0, LogsLayout.AbsoluteContentSize.Y + 10)
+    -- Auto-scroll al final
+    task.wait(0.05)
+    ScrollLogs.CanvasPosition = Vector2.new(0, ScrollLogs.CanvasSize.Y.Offset)
+end
+
+--// Función para formatear tiempo
 local function formatTime(seconds)
     local days = math.floor(seconds / 86400)
     seconds = seconds % 86400
@@ -135,52 +260,141 @@ local function formatTime(seconds)
     seconds = seconds % 3600
     local minutes = math.floor(seconds / 60)
     local secs = seconds % 60
-    
-    local result = ""
-    if days > 0 then result = result .. days .. " days, " end
-    if hours > 0 then result = result .. hours .. " hours, " end
-    if minutes > 0 then result = result .. minutes .. " minutes, " end
-    result = result .. secs .. " seconds"
-    
-    return result
+    local parts = {}
+    if days > 0 then table.insert(parts, days.."d") end
+    if hours > 0 then table.insert(parts, hours.."h") end
+    if minutes > 0 then table.insert(parts, minutes.."m") end
+    table.insert(parts, secs.."s")
+    return table.concat(parts, " ")
 end
 
---// AntiAFK System
-local afkTime = 0
-local function preventAFK()
-    game:GetService("Players").LocalPlayer.Idled:Connect(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
+--// Función para simular movimiento (WASD o ratón)
+local function SimulateMovement()
+    if not isRunning or not Settings.SimulateMovement then return end
+    if Settings.MovementType == "WASD" then
+        -- Simular presionar tecla W por un momento
+        local key = Enum.KeyCode.W
+        game:GetService("VirtualInputManager"):SendKeyEvent(true, key, false, game)
+        task.wait(0.2)
+        game:GetService("VirtualInputManager"):SendKeyEvent(false, key, false, game)
+        AddLog("🦶 Movimiento simulado (W)", Color3.fromRGB(100, 200, 255))
+    else
+        -- Simular movimiento del ratón
+        local mouse = LocalPlayer:GetMouse()
+        local originalPos = mouse.X
+        local newPos = originalPos + 50
+        game:GetService("VirtualInputManager"):SendMouseMovementEvent(newPos, mouse.Y, 0)
+        task.wait(0.1)
+        game:GetService("VirtualInputManager"):SendMouseMovementEvent(originalPos, mouse.Y, 0)
+        AddLog("🖱️ Ratón simulado", Color3.fromRGB(100, 200, 255))
+    end
+end
 
-        -- Log Kick Attempt
-        local Log = Instance.new("TextLabel")
-        Log.Parent = ScrollFrame
-        Log.Size = UDim2.new(1, -5, 0, 20)
-        Log.BackgroundTransparency = 1
-        Log.Text = "❌ Kick prevented at " .. formatTime(afkTime)
-        Log.Font = Enum.Font.Gotham
-        Log.TextSize = 12
-        Log.TextColor3 = Color3.fromRGB(255, 100, 100)
-        Log.TextXAlignment = Enum.TextXAlignment.Left
+--// Anti-Kick usando VirtualUser o fallback
+local function AntiKick()
+    if not isRunning or not Settings.AntiAFK then return end
+    local success, err = pcall(function()
+        if Settings.UseVirtualUser then
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        else
+            -- Fallback: simular tecla sin movimiento
+            game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.LeftShift, false, game)
+            task.wait(0.05)
+            game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.LeftShift, false, game)
+        end
+    end)
+    if success then
+        AddLog("🛡️ Kick evadido a los " .. formatTime(afkTime), Color3.fromRGB(255, 150, 100))
+    else
+        AddLog("⚠️ Error al evadir kick: " .. tostring(err), Color3.fromRGB(255, 80, 80))
+    end
+end
 
-        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 5)
+--// Evento Idled
+local function setupIdled()
+    LocalPlayer.Idled:Connect(function()
+        if isRunning and Settings.AntiAFK then
+            AntiKick()
+        end
     end)
 end
+setupIdled()
 
---// Clear Logs Function
-ClearLogsButton.MouseButton1Click:Connect(function()
-    for _, v in pairs(ScrollFrame:GetChildren()) do
-        if v:IsA("TextLabel") then v:Destroy() end
-    end
-    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-end)
-
---// AFK Timer System
+--// Timer y movimiento periódico
 task.spawn(function()
-    preventAFK()
     while true do
         task.wait(1)
-        afkTime = afkTime + 1
-        TimerLabel.Text = "AFK Time: " .. formatTime(afkTime)
+        if isRunning then
+            afkTime = afkTime + 1
+            TimerText.Text = "⏱️ Tiempo AFK: " .. formatTime(afkTime)
+            
+            -- Movimiento automático cada X segundos
+            if Settings.SimulateMovement then
+                movementTimer = movementTimer + 1
+                if movementTimer >= Settings.MovementInterval then
+                    movementTimer = 0
+                    SimulateMovement()
+                end
+            end
+        end
     end
 end)
+
+--// Botón de iniciar/detener
+ToggleAFKButton.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    if isRunning then
+        ToggleAFKButton.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+        ToggleAFKButton.Text = "⏸️ Detener Anti-AFK"
+        StatusText.Text = "🔵 Estado: Activo (Anti-Kick ON)"
+        StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        AddLog("✅ Sistema reactivado", Color3.fromRGB(100, 255, 100))
+    else
+        ToggleAFKButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+        ToggleAFKButton.Text = "▶️ Iniciar Anti-AFK"
+        StatusText.Text = "🔴 Estado: Detenido (Anti-Kick OFF)"
+        StatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+        AddLog("⏸️ Sistema detenido manualmente", Color3.fromRGB(255, 200, 100))
+    end
+end)
+
+--// Limpiar logs
+ClearLogsButton.MouseButton1Click:Connect(function()
+    for _, child in ipairs(ScrollLogs:GetChildren()) do
+        if child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+    ScrollLogs.CanvasSize = UDim2.new(0, 0, 0, 0)
+    AddLog("📋 Logs limpiados", Color3.fromRGB(200, 200, 200))
+end)
+
+--// Movimiento manual
+ManualMoveButton.MouseButton1Click:Connect(function()
+    if isRunning then
+        SimulateMovement()
+    else
+        AddLog("❌ No se puede simular movimiento mientras el sistema está detenido", Color3.fromRGB(255, 100, 100))
+    end
+end)
+
+--// Detectar actividad real para resetear el timer (opcional)
+UserInputService.InputBegan:Connect(function()
+    if isRunning then
+        afkTime = 0
+        TimerText.Text = "⏱️ Tiempo AFK: 0 segundos"
+        AddLog("🔄 Tiempo resetado por actividad manual", Color3.fromRGB(150, 255, 150))
+    end
+end)
+
+--// Mensaje de inicio
+AddLog("🚀 AntiAFK Suite v4.0 cargado correctamente", Color3.fromRGB(0, 255, 150))
+AddLog("⚙️ Configuración: Anti-Kick activado, Movimiento cada " .. Settings.MovementInterval .. "s", Color3.fromRGB(200, 200, 200))
+if not Settings.UseVirtualUser then
+    AddLog("⚠️ Usando método alternativo (VirtualUser no disponible)", Color3.fromRGB(255, 200, 0))
+end
+
+--// Pequeña animación de entrada
+MainFrame.Visible = true
+MainFrame.BackgroundTransparency = 0.15
